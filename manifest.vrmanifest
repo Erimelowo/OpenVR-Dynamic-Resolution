@@ -1,0 +1,18 @@
+{
+	"source" : "builtin",
+	"applications": [
+		{
+			"app_key": "openvr-dynamic-resolution",
+			"launch_type": "binary",
+			"binary_path_windows": "OpenVR-Dynamic-Resolution.exe",
+			"is_dashboard_overlay": true,
+
+			"strings": {
+				"en_us": {
+					"name": "OpenVR Dynamic Resolution",
+					"description": "Adjusts HMD resolution with frametimes"
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,9 @@
+{
+    "name": "openvr-dynamic-resolution",
+    "version-string": "0.1.0",
+    "dependencies": [
+        "fmt",
+        "openvr",
+        "args"
+    ]
+}

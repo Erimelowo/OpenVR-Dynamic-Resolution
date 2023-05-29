@@ -20,7 +20,7 @@ Make sure to check the Settings Descriptions below, especially to auto-start the
 
 ## Settings Descriptions
 
-Settings are found in the `settings.ini` file. Do not rename that file. It should be located with your executable file (e.g., `OpenVR-Dynamic-Resolution.exe`).
+Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as your executable file (`OpenVR-Dynamic-Resolution.exe`).
 
 - `autoStart`: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.
 

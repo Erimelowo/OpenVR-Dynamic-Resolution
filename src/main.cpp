@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 		Sleep(600);
 		std::system("cls");
 	}else if(autoStartResult == 2){
-		Sleep(2000);
+		Sleep(5000);
 		std::system("cls");
 	}
 

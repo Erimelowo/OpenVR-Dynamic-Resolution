@@ -22,14 +22,18 @@ int handle_setup(bool install) {
     vr::EVRApplicationError app_error = vr::VRApplicationError_None;
 
     bool currently_installed = apps->IsApplicationInstalled(application_key);
+
     std::string manifest_path = Path_MakeAbsolute(rel_manifest_path, Path_StripFilename(Path_GetExecutablePath()));
     if (install) {
+        fmt::print("Enabling auto-start.\n");
+        
         if (currently_installed) {
-            //fmt::print("Auto-start is enabled.\n");
+            if(apps->GetApplicationAutoLaunch(application_key) == false){
+                apps->SetApplicationAutoLaunch(application_key, true);
+                return 1;
+            }
             return 0;
         }
-
-        fmt::print("Enabling auto-start.\n");
 
         app_error = apps->AddApplicationManifest(manifest_path.c_str());
         if (app_error != vr::VRApplicationError_None) {
@@ -45,19 +49,15 @@ int handle_setup(bool install) {
         return 1;
     }
     else if (currently_installed) {
-        fmt::print("Disabling auto-start.\n");
-        std::string manifest_path = Path_MakeAbsolute(rel_manifest_path, Path_StripFilename(Path_GetExecutablePath()));
-
-        app_error = apps->RemoveApplicationManifest(manifest_path.c_str());
-
-        if (app_error != vr::VRApplicationError_None) {
-            fmt::print("Auto-start could not be disabled: {}\n", apps->GetApplicationsErrorNameFromEnum(app_error));
-            return 2;
+        if (apps->GetApplicationAutoLaunch(application_key) == false){
+            return 0;
         }
+
+        fmt::print("Disabling auto-start\n");
+        apps->SetApplicationAutoLaunch(application_key, false);
         return 1;
     }
     else {
-        // fmt::print("Auto-start is disabled.\n");
         return 0;
     }
 }

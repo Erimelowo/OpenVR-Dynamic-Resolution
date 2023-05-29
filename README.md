@@ -13,16 +13,16 @@ This won't work in games that require a restart for resolution changes _(e.g. Va
 _Make sure **SteamVR's Render Resolution** is set to **Custom** (which percentage doesn't matter)_
 
 - Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OpenVR-Dynamic-Resolution.zip)
-- Extract the .zip and move it in a fixed directory (e.g. Documents, **not** Downloads)
+- Extract the .zip
 - Launch `OpenVR-Dynamic-Resolution.exe`
 
 Make sure to check the Settings Descriptions below, especially to auto-start the program with SteamVR.
 
 ## Settings Descriptions
 
-Settings are found in the `settings.ini` file. Do not rename it.
+Settings are found in the `settings.ini` file. Do not rename that file.
 
-- autoStart: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically. **Warning: If you try disabling auto-start from a different folder than the one you enabled it from, your SteamVR settings might be corrupted and wiped. Place OpenVR-Dynamic-Resolution in a fixed directory such as Documents. Make sure to disable auto-start from the original folder before moving it if you had enabled it.**
+- autoStart: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.
 
 - initialRes: The resolution the program sets when starting.
 

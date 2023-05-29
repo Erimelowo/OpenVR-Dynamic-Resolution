@@ -9,7 +9,7 @@
 
 using namespace vr;
 
-static constexpr const char* version = "0.1.0";
+static constexpr const char* version = "0.1.1";
 
 int autoStart = 0;
 float initialRes = 1.0f;

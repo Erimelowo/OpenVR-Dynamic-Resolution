@@ -1,4 +1,5 @@
 # OpenVR Dynamic Resolution
+[![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
 
 OpenVR app that dynamically adjusts the HMD resolution to the GPU frametime.
 

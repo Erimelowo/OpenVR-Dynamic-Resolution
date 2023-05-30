@@ -6,7 +6,7 @@ This allows you to always have the maximum resolution your GPU can handle while 
 
 This is **not** the same as SteamVR's Auto Resolution, which behaviour's is quite bizarre, but seems to be using some benchmarking approach that doesn't work for the same as OVRDR.
 
-This won't work in games that require a restart for resolution changes _(e.g. Vail VR)_, or that use their own dynamic resolution _(e.g. Half Life Alyx)_.
+This won't work in games that require a restart for resolution changes, or that use their own dynamic resolution. For a list of working and non-working games, check out [WorkingGames.md](WorkingGames.md)
 
 ## Installation/Using It
 
@@ -54,7 +54,7 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 ## Building from source
 
-We assume that you have a recent Visual Studio (2022), Git and CMake.
+[For the time being, we only support Windows](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/issues/8). We assume that you have a recent Visual Studio (2022), Git and CMake.
 
 ```
 git clone --recursive https://github.com/Louka3000/OpenVR-Dynamic-Resolution.git

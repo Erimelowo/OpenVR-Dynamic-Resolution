@@ -2,8 +2,12 @@ List of working and non-working games. Games not on this list have not been test
 
 ## Working games
 
+- Arizona Sunshine
 - BONEWORKS
+- ChilloutVR
+- NeosVR
 - Space Pirate Trainer
+- The Forest
 - Until You Fall
 - VRChat
 
@@ -11,9 +15,14 @@ List of working and non-working games. Games not on this list have not been test
 
 - After The Fall
 - Beat Saber
+- Blaston
 - BONELAB
 - Half-Life: Alyx
+- Pavlov VR
 - Pistol Whip
+- PokerStars VR
+- Rec Room
 - SkyrimVR
+- The Walking Dead: Saints & Sinners
 - VailVR
 - Zenith MMO

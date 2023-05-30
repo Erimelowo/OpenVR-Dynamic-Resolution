@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
 
 		// Get info about current frame
 		uint32_t frameIndex = frameTiming->m_nFrameIndex;
-		float frameRepeat = frameTiming->m_nNumFramePresents;
+		uint32_t frameRepeat = frameTiming->m_nNumFramePresents;
 		if (frameRepeat < 1) frameRepeat = 1;
 		float gpuTime = frameTiming->m_flTotalRenderGpuMs;
 		uint32_t reprojectionFlag = frameTiming->m_nReprojectionFlags;

@@ -4,6 +4,8 @@
     "dependencies": [
         "fmt",
         "openvr",
-        "args"
+        "args",
+	    "simpleini",
+        "ncurses"
     ]
 }

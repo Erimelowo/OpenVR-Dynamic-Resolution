@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+.idea/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -365,3 +366,4 @@ FodyWeavers.xsd
 # Cmake (when using VS Code or other)
 build/
 .vscode/
+cmake-build-debug/

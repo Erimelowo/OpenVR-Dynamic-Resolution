@@ -52,10 +52,9 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `alwaysReproject`: (0 = disabled, 1 = enabled) Enabling will double the target frametime, so if you're at a target FPS of 120, it'll target 60. Useful if you have a bad CPU but good GPU.
 
-
 ## Building from source
 
-For the time being, we only support Windows. We assume that you have a recent Visual Studio (2022), git and cmake.
+We assume that you have a recent Visual Studio (2022), Git and CMake.
 
 ```
 git clone --recursive https://github.com/Louka3000/OpenVR-Dynamic-Resolution.git
@@ -65,6 +64,7 @@ cmake --build build --config Release
 ```
 
 You can then execute the newly built binary:
+
 ```
 .\build\Release\OpenVR-Dynamic-Resolution.exe
 ```

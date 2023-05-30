@@ -41,8 +41,13 @@ install(FILES "${PROJECT_SOURCE_DIR}/manifest.vrmanifest"
     DESTINATION "."
 )
 
-set(VCPKG_BINARIES "${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows/bin")
-install(FILES "${VCPKG_BINARIES}/openvr_api.dll" "${VCPKG_BINARIES}/fmt.dll" DESTINATION ".")
+if (WIN32)
+  set(VCPKG_BINARIES "${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows/bin")
+  install(FILES "${VCPKG_BINARIES}/openvr_api.dll" DESTINATION ".")
+elseif(UNIX)
+    set(VCPKG_BINARIES "${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/bin")
+    install(FILES "${VCPKG_BINARIES}/libopenvr_api.so" DESTINATION ".")
+endif()
 
 install(TARGETS "${PROJECT_NAME}"
     RUNTIME

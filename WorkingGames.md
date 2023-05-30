@@ -5,6 +5,7 @@ List of working and non-working games. Games not on this list have not been test
 - Arizona Sunshine
 - BONEWORKS
 - ChilloutVR
+- H3VR
 - NeosVR
 - Space Pirate Trainer
 - The Forest

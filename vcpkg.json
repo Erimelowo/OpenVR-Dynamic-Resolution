@@ -5,7 +5,8 @@
         "fmt",
         "openvr",
         "args",
-	    "simpleini",
-        "ncurses"
+        "simpleini",
+        { "name": "ncurses", "platform": "!windows | mingw" },
+        { "name": "pdcurses", "platform": "windows & !uwp & !mingw" }
     ]
 }

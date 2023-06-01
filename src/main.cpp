@@ -3,7 +3,7 @@
 #include <thread>
 #include <fmt/core.h>
 #include <args.hxx>
-#include <ncurses.h>
+#include <curses.h>
 #include <stdlib.h>
 #include "SimpleIni.h"
 #include "setup.hpp"

@@ -104,7 +104,6 @@ int main(int argc, char* argv[]) {
 	// Initialize loop variables
 	long lastChangeTime = 0;
 	std::list<float> gpuTimes;
-	std::list<bool> gpuReprojections;
 
 	// event loop
 	while (true) {
@@ -138,16 +137,6 @@ int main(int argc, char* argv[]) {
 		}
 		averageGpuTime /= gpuTimes.size();
 
-		// Check if GPU hasn't been the offender for a given time
-		gpuReprojections.push_front(reprojectionFlag == 276);
-		if (gpuReprojections.size() > dataAverageSamples * 4)
-			gpuReprojections.pop_back();
-		bool stableGpuReprojection = true;
-		for each (bool gpuReproj in gpuReprojections) {
-			if (gpuReproj == false)
-				stableGpuReprojection = false;
-		}
-
 		// Write info to console
 		setCursorPosition(0, 0);
 		fmt::print("OpenVR Dynamic Resolution v.{}\n", version);
@@ -174,10 +163,11 @@ int main(int argc, char* argv[]) {
 				reason = "Prediction mask";
 			else if (reprojectionFlag == 3840)
 				reason = "Throttle mask";
-			fmt::print("Reprojection reason: {}              \n\n", reason);
+			fmt::print("Reprojection reason: {}                  \n\n", reason);
 		}
 		else {
-			fmt::print("Reprojecting: No \n\n\n");
+			fmt::print("Reprojecting: No \n");
+			fmt::print("                                         \n\n");
 		}
 
 		fmt::print("Resolution = {}%    \n\n\n\n\n\n\n\n\n\n\n\n\n\n", std::to_string(int(currentRes * 100)));
@@ -189,8 +179,8 @@ int main(int argc, char* argv[]) {
 		if (currentTime - resChangeDelayMs > lastChangeTime) {
 			lastChangeTime = currentTime;
 			if(averageGpuTime > minGpuTimeThreshold){
-				// Double target frametime if CPU bottlenecks or if user wants to.
-				if ((frameRepeat > 1 && stableGpuReprojection == false) || alwaysReproject == 1)
+				// Double the target frametime if the user wants to.
+				if (alwaysReproject == 1)
 					targetGpuTime *= 2;
 
 				// Calculate new resolution
@@ -199,6 +189,7 @@ int main(int argc, char* argv[]) {
 					newRes += (((targetGpuTime - averageGpuTime) / targetGpuTime) * resIncreaseScale) + resIncreaseMin;
 				}
 				else if (averageGpuTime > targetGpuTime * resDecreaseThreshold) {
+					// FIXME this math for resDecreaseScale sucks
 					newRes -= (std::abs((averageGpuTime - targetGpuTime) / targetGpuTime) * resDecreaseScale) + resDecreaseMin;
 				}
 				// Clamp resolution

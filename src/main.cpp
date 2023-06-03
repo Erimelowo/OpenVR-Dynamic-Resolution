@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
 
 	// Initialize loop variables
-	long lastChangeTime = 0;
+	long lastChangeTime = getCurrentTimeMillis();
 	std::list<float> gpuTimes;
 
 	// event loop

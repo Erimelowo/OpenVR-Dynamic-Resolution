@@ -4,6 +4,9 @@
     "dependencies": [
         "fmt",
         "openvr",
-        "args"
+        "args",
+        "simpleini",
+        { "name": "ncurses", "platform": "!windows | mingw" },
+        { "name": "pdcurses", "platform": "windows & !uwp & !mingw" }
     ]
 }

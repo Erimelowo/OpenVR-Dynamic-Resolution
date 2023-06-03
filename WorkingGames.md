@@ -1,4 +1,4 @@
-List of working and non-working games. Games not on this list have not been tested and may or may not work. Please make a PR if you tested a game that is not on this list.
+List of working and non-working games. Games not on this list have not been tested and may or may not work. Anyone, feel free to contribute to it ^^
 
 ## Working games
 

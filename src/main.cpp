@@ -10,7 +10,7 @@
 
 using namespace vr;
 
-static constexpr const char *version = "0.1.1";
+static constexpr const char *version = "0.1.2";
 
 int autoStart = 0;
 float initialRes = 1.0f;
@@ -139,7 +139,6 @@ int main(int argc, char *argv[]) {
 	// Initialize loop variables
 	long lastChangeTime = 0;
 	std::list<float> gpuTimes;
-	std::list<bool> gpuReprojections;
 
 	// event loop
 	while (true) {
@@ -175,17 +174,10 @@ int main(int argc, char *argv[]) {
 		}
 		averageGpuTime /= static_cast<float>(gpuTimes.size());
 
-		// Check if GPU hasn't been the offender for a given time
-		gpuReprojections.push_front(reprojectionFlag == 276);
-		if (gpuReprojections.size() > dataAverageSamples * 4)
-			gpuReprojections.pop_back();
-		bool stableGpuReprojection = true;
-		for (bool gpuReproj: gpuReprojections) {
-			if (!gpuReproj)
-				stableGpuReprojection = false;
-		}
+		// Clear console
 		clear();
 		getmaxyx(stdscr, rows, cols);
+
 		// Write info to console
 		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution v.{}\n", version).c_str());
 		if (settingsLoaded) {
@@ -229,17 +221,20 @@ int main(int argc, char *argv[]) {
 		// Adjust resolution
 		if (currentTime - resChangeDelayMs > lastChangeTime) {
 			lastChangeTime = currentTime;
+
 			if (averageGpuTime > minGpuTimeThreshold) {
-				// Double target frametime if CPU bottlenecks or if user wants to.
-				if ((frameRepeat > 1 && !stableGpuReprojection) || alwaysReproject == 1)
+				// Double the target frametime if the user wants to.
+				if (alwaysReproject == 1)
 					targetGpuTime *= 2;
 
 				// Calculate new resolution
 				float newRes = currentRes;
 				if (averageGpuTime < targetGpuTime * resIncreaseThreshold) {
+					// FIXME We assume resIncreaseThreshold < 1
 					newRes += (((targetGpuTime - averageGpuTime) / targetGpuTime) *
 							   resIncreaseScale) + resIncreaseMin;
 				} else if (averageGpuTime > targetGpuTime * resDecreaseThreshold) {
+					// FIXME this math for resDecreaseScale sucks
 					newRes -= (std::abs(
 							(averageGpuTime - targetGpuTime) / targetGpuTime) *
 							   resDecreaseScale) + resDecreaseMin;

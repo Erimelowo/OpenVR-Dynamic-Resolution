@@ -14,18 +14,18 @@ using namespace vr;
 
 static constexpr const char *version = "0.2.0";
 
-int autoStart = 0;
+int autoStart = 1;
 float initialRes = 1.0f;
 
-float minRes = 0.8;
-float maxRes = 4.0f;
+float minRes = 0.75;
+float maxRes = 5.0f;
 long dataPullDelayMs = 250;
 long resChangeDelayMs = 1400;
-float minGpuTimeThreshold = 0.7f;
-float resIncreaseMin = 0.02f;
-float resDecreaseMin = 0.06f;
-float resIncreaseScale = 0.3f;
-float resDecreaseScale = 0.5;
+float minGpuTimeThreshold = 0.75f;
+float resIncreaseMin = 0.03f;
+float resDecreaseMin = 0.09f;
+float resIncreaseScale = 0.55f;
+float resDecreaseScale = 0.9;
 float resIncreaseThreshold = 0.74;
 float resDecreaseThreshold = 0.86f;
 int dataAverageSamples = 3;

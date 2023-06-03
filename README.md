@@ -18,8 +18,6 @@ _Make sure **SteamVR's Render Resolution** is set to **Custom** (which percentag
 - Extract the .zip
 - Launch `OpenVR-Dynamic-Resolution.exe`
 
-Make sure to check the Settings Descriptions below, especially to auto-start the program with SteamVR.
-
 ## Settings Descriptions
 
 Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as your executable file (`OpenVR-Dynamic-Resolution.exe`).

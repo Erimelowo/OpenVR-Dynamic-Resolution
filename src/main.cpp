@@ -29,6 +29,7 @@ float resDecreaseScale = 0.5;
 float resIncreaseThreshold = 0.74;
 float resDecreaseThreshold = 0.86f;
 int dataAverageSamples = 3;
+int resetOnThreshold = 1;
 int alwaysReproject = 0;
 
 bool loadSettings()
@@ -54,6 +55,7 @@ bool loadSettings()
 	resIncreaseThreshold = std::stof(ini.GetValue("Resolution change", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str())) / 100.0f;
 	resDecreaseThreshold = std::stof(ini.GetValue("Resolution change", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str())) / 100.0f;
 	dataAverageSamples = std::stoi(ini.GetValue("Resolution change", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+	resetOnThreshold = std::stoi(ini.GetValue("Resolution change", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
 	alwaysReproject = std::stoi(ini.GetValue("Resolution change", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
 	return true;
 }
@@ -122,6 +124,7 @@ int main(int argc, char *argv[])
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();
 	std::list<float> gpuTimes;
+	float lastRes = initialRes;
 
 	// event loop
 	while (true)
@@ -238,9 +241,20 @@ int main(int argc, char *argv[])
 					newRes = minRes;
 
 				// Sets the new resolution
+				if (lastRes != newRes)
+				{
+					vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
+											   vr::k_pch_SteamVR_SupersampleScale_Float,
+											   newRes);
+					lastRes = newRes;
+				}
+			}
+			else if (resetOnThreshold == 1 && lastRes != initialRes)
+			{
 				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 										   vr::k_pch_SteamVR_SupersampleScale_Float,
-										   newRes);
+										   initialRes);
+				lastRes = initialRes;
 			}
 		}
 

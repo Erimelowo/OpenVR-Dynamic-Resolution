@@ -52,6 +52,8 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `dataAverageSamples`: Number of samples to use for the average GPU time. Depends on dataPullDelayMs.
 
+- `resetOnThreshold`: (0 = disabled, 1 = enabled) Enabling will reset the resolution to initialRes whenever minGpuTimeThreshold is met. Useful if you wanna go from playing a supported game to an unsuported games without having to reset your resolution/the program/SteamVR.
+
 - `alwaysReproject`: (0 = disabled, 1 = enabled) Enabling will double the target frametime, so if you're at a target FPS of 120, it'll target 60. Useful if you have a bad CPU but good GPU.
 
 ## Building from source

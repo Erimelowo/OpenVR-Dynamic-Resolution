@@ -1,4 +1,5 @@
 # OpenVR Dynamic Resolution
+
 [![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
 
 OpenVR app that dynamically adjusts the HMD resolution to the GPU frametime.
@@ -49,13 +50,13 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `resDecreaseThreshold`: Percentage of the target frametime at which the program will stop decreasing resolution
 
-- `dataAverageSamples`: Samples to take for the average GPU time and to know if GPU is the bottleneck or not. Depends on dataPullDelayMs.
+- `dataAverageSamples`: Number of samples to use for the average GPU time. Depends on dataPullDelayMs.
 
 - `alwaysReproject`: (0 = disabled, 1 = enabled) Enabling will double the target frametime, so if you're at a target FPS of 120, it'll target 60. Useful if you have a bad CPU but good GPU.
 
 ## Building from source
 
-[For the time being, we only support Windows](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/issues/8). We assume that you have a recent Visual Studio (2022), Git and CMake.
+We assume that you already have Git and CMake installed. Run:
 
 ```
 git clone --recursive https://github.com/Louka3000/OpenVR-Dynamic-Resolution.git
@@ -69,8 +70,6 @@ You can then execute the newly built binary:
 ```
 .\build\Release\OpenVR-Dynamic-Resolution.exe
 ```
-
-You can also build the project directly from within Visual Studio, since recent versions of Visual Studio support both git and cmake.
 
 ## Licensing
 

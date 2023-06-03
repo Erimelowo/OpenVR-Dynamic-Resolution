@@ -1,3 +1,2 @@
 [*.{cpp,hpp,c,h}]
 indent_style = tab
-max_line_length = 88

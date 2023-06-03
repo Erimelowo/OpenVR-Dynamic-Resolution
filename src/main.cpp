@@ -5,13 +5,14 @@
 #include <args.hxx>
 #include <curses.h>
 #include <stdlib.h>
+
 #include "SimpleIni.h"
 #include "setup.hpp"
 
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "0.1.2";
+static constexpr const char *version = "0.2.0";
 
 int autoStart = 0;
 float initialRes = 1.0f;
@@ -66,6 +67,12 @@ long getCurrentTimeMillis()
 
 int main(int argc, char *argv[])
 {
+	int rows, cols;		 // max rows and cols
+	initscr();			 // Initialize screen
+	cbreak();			 // Disable line-buffering (for input)
+	noecho();			 // Don't show what the user types
+	resize_term(17, 64); // Sets the initial (y, x) resolution
+
 	// Check for errors
 	EVRInitError init_error = VRInitError_None;
 	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
@@ -73,20 +80,18 @@ int main(int argc, char *argv[])
 	if (init_error != VRInitError_None)
 	{
 		system = nullptr;
-		fmt::print("Unable to init VR runtime: {}\n",
-				   VR_GetVRInitErrorAsEnglishDescription(init_error));
+		printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
+		refresh();
+		std::this_thread::sleep_for(4000ms);
 		return EXIT_FAILURE;
 	}
 	if (!VRCompositor())
 	{
-		fmt::print("Failed to initialize VR compositor!");
+		printw("Failed to initialize VR compositor.");
+		refresh();
+		std::this_thread::sleep_for(4000ms);
 		return EXIT_FAILURE;
 	}
-	int rows, cols; // max rows and cols
-	int row, col;	// current row and col
-	initscr();		// Initialize screen
-	cbreak();		// Disable line-buffering (for input)
-	noecho();		// Don't show what the user types
 
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
@@ -96,6 +101,7 @@ int main(int argc, char *argv[])
 
 	if (autoStartResult == 1)
 	{
+		refresh();
 		std::this_thread::sleep_for(1000ms);
 		printw("Done!");
 		refresh();
@@ -103,7 +109,8 @@ int main(int argc, char *argv[])
 	}
 	else if (autoStartResult == 2)
 	{
-		std::this_thread::sleep_for(5000ms);
+		refresh();
+		std::this_thread::sleep_for(4000ms);
 	}
 	clear();
 	refresh();
@@ -159,23 +166,25 @@ int main(int argc, char *argv[])
 		getmaxyx(stdscr, rows, cols);
 
 		// Write info to console
-		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution v.{}\n", version).c_str());
+		attron(A_UNDERLINE);
+		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution v.{}", version).c_str());
+		attroff(A_UNDERLINE);
 		if (settingsLoaded)
-			printw("%s", fmt::format("settings.ini successfully loaded").c_str());
+			mvprintw(1, 0, "%s", fmt::format("settings.ini successfully loaded").c_str());
 		else
-			printw("%s", fmt::format("Error loading settings.ini").c_str());
+			mvprintw(1, 0, "%s", fmt::format("Error loading settings.ini").c_str());
 
-		mvprintw(4, 0, "%s", fmt::format("Target FPS: {} fps\n", std::to_string(int(targetFps))).c_str());
-		printw("%s", fmt::format("Target GPU frametime: {} ms\n\n", std::to_string(targetGpuTime)).c_str());
+		mvprintw(4, 0, "%s", fmt::format("Target FPS: {} fps", std::to_string(int(targetFps))).c_str());
+		std::string displayedTime = std::to_string(targetGpuTime).substr(0, 4);
+		mvprintw(5, 0, "%s", fmt::format("Target GPU frametime: {} ms", displayedTime).c_str());
 
-		printw("%s", fmt::format("VSync'd FPS: {} fps\n",
-								 std::to_string(int(targetFps / frameRepeat)))
-						 .c_str());
-		printw("%s", fmt::format("GPU frametime: {} ms\n\n", std::to_string(averageGpuTime)).c_str());
+		mvprintw(7, 0, "%s", fmt::format("VSync'd FPS: {} fps", std::to_string(int(targetFps / frameRepeat))).c_str());
+		std::string displayedAverageTime = std::to_string(averageGpuTime).substr(0, 4);
+		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 
 		if (frameRepeat > 1)
 		{
-			printw("Reprojecting: Yes\n");
+			mvprintw(10, 0, "Reprojecting: Yes");
 
 			char const *reason = "Other";
 			if (reprojectionFlag == 20)
@@ -186,17 +195,16 @@ int main(int argc, char *argv[])
 				reason = "Prediction mask";
 			else if (reprojectionFlag == 3840)
 				reason = "Throttle mask";
-			printw("%s", fmt::format("Reprojection reason: {}", reason).c_str());
+			mvprintw(11, 0, "%s", fmt::format("Reprojection reason: {}", reason).c_str());
 		}
 		else
 		{
-			printw("Reprojecting: No");
+			mvprintw(10, 0, "Reprojecting: No");
 		}
 
-		getyx(stdscr, row, col);
-		mvprintw(row + 2 + (frameRepeat == 1), 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(currentRes * 100))).c_str());
-
-		mvprintw(rows - 3, 0, "%s", fmt::format("https://github.com/Louka3000/OpenVR-Dynamic-Resolution\n").c_str());
+		attron(A_BOLD);
+		mvprintw(13, 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(currentRes * 100))).c_str());
+		attroff(A_BOLD);
 
 		// Adjust resolution
 		if (currentTime - resChangeDelayMs > lastChangeTime)

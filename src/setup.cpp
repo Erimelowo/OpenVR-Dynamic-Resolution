@@ -15,13 +15,13 @@ void shutdown_vr(vr::IVRSystem *_system)
 
 int handle_setup(bool install)
 {
-	vr::EVRInitError init_error = vr::VRInitError_None;
-	std::unique_ptr<vr::IVRSystem, decltype(&shutdown_vr)> system(vr::VR_Init(&init_error, vr::VRApplication_Utility), &shutdown_vr);
-	if (init_error != vr::VRInitError_None)
-	{
-		printw("%s", fmt::format("Unable to init VR runtime as utility: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
-		return 2;
-	}
+	// vr::EVRInitError init_error = vr::VRInitError_None;
+	// std::unique_ptr<vr::IVRSystem, decltype(&shutdown_vr)> system(vr::VR_Init(&init_error, vr::VRApplication_Utility), &shutdown_vr);
+	// if (init_error != vr::VRInitError_None)
+	//{
+	//	printw("%s", fmt::format("Unable to init VR runtime as utility: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
+	//	return 2;
+	// }
 
 	vr::IVRApplications *apps = vr::VRApplications();
 	vr::EVRApplicationError app_error = vr::VRApplicationError_None;

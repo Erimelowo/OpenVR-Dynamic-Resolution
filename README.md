@@ -8,11 +8,11 @@ This allows you to always have the maximum resolution your GPU can handle while 
 
 This is **not** the same as SteamVR's Auto Resolution, which behaviour's is quite bizarre, but seems to be using some benchmarking approach that doesn't work for the same as OVRDR.
 
-This won't work in games that require a restart for resolution changes, or that use their own dynamic resolution. For a list of working and non-working games, check out [WorkingGames.md](WorkingGames.md)
+This won't work in games that require a restart for resolution changes, or that use their own dynamic resolution. **For a list of working and non-working games, check out [WorkingGames.md](WorkingGames.md)**
 
 ## Installation/Using It
 
-_Make sure **SteamVR's Render Resolution** is set to **Custom** (which percentage doesn't matter)_
+**_Make sure SteamVR's Render Resolution is set to Custom_**
 
 - Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OpenVR-Dynamic-Resolution.zip)
 - Extract the .zip

@@ -12,22 +12,22 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "0.2.0";
+static constexpr const char *version = "0.2.1";
 
 int autoStart = 1;
 float initialRes = 1.0f;
 
-float minRes = 0.75;
+float minRes = 0.60;
 float maxRes = 5.0f;
 long dataPullDelayMs = 250;
 long resChangeDelayMs = 1400;
 float minGpuTimeThreshold = 0.75f;
 float resIncreaseMin = 0.03f;
 float resDecreaseMin = 0.09f;
-float resIncreaseScale = 0.55f;
+float resIncreaseScale = 0.60f;
 float resDecreaseScale = 0.9;
-float resIncreaseThreshold = 0.74;
-float resDecreaseThreshold = 0.86f;
+float resIncreaseThreshold = 0.75;
+float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 3;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
@@ -150,8 +150,16 @@ int main(int argc, char *argv[])
 		uint32_t frameRepeat = frameTiming->m_nNumFramePresents;
 		if (frameRepeat < 1)
 			frameRepeat = 1;
+		uint32_t currentFps = targetFps / frameRepeat;
 		float gpuTime = frameTiming->m_flTotalRenderGpuMs;
 		uint32_t reprojectionFlag = frameTiming->m_nReprojectionFlags;
+
+		// Double the target frametime if the user wants to.
+		if (alwaysReproject == 1)
+		{
+			targetFps /= 2;
+			targetGpuTime *= 2;
+		}
 
 		// Calculate average GPU frametime
 		gpuTimes.push_front(gpuTime);
@@ -181,7 +189,7 @@ int main(int argc, char *argv[])
 		std::string displayedTime = std::to_string(targetGpuTime).substr(0, 4);
 		mvprintw(5, 0, "%s", fmt::format("Target GPU frametime: {} ms", displayedTime).c_str());
 
-		mvprintw(7, 0, "%s", fmt::format("VSync'd FPS: {} fps", std::to_string(int(targetFps / frameRepeat))).c_str());
+		mvprintw(7, 0, "%s", fmt::format("VSync'd FPS: {} fps", std::to_string(currentFps)).c_str());
 		std::string displayedAverageTime = std::to_string(averageGpuTime).substr(0, 4);
 		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 
@@ -213,13 +221,10 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
+			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
-			if (averageGpuTime > minGpuTimeThreshold)
+			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
 			{
-				// Double the target frametime if the user wants to.
-				if (alwaysReproject == 1)
-					targetGpuTime *= 2;
-
 				// Calculate new resolution
 				float newRes = currentRes;
 				if (averageGpuTime < targetGpuTime * resIncreaseThreshold)
@@ -249,7 +254,7 @@ int main(int argc, char *argv[])
 					lastRes = newRes;
 				}
 			}
-			else if (resetOnThreshold == 1 && lastRes != initialRes)
+			else if (resetOnThreshold == 1 && lastRes != initialRes && !dashboardOpen)
 			{
 				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 										   vr::k_pch_SteamVR_SupersampleScale_Float,

@@ -15,7 +15,7 @@ List of working and non-working games. Games not on this list have not been test
 
 ## Working but has stutters when changing resolutions
 
--Half-Life 2: VR Mod
+- Half-Life 2: VR Mod
 
 ## Non-working games
 

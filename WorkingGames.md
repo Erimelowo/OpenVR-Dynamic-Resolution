@@ -6,6 +6,7 @@ List of working and non-working games. Games not on this list have not been test
 - BONEWORKS
 - ChilloutVR
 - H3VR
+- Half-Life 2: VR Mod
 - NeosVR
 - Space Pirate Trainer
 - The Forest

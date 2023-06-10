@@ -17,13 +17,17 @@ List of working and non-working games. Games not on this list have not been test
 - After The Fall
 - Beat Saber
 - Blaston
+- Bullet Train (through Revive)
 - BONELAB
+- Google Chrome (WebXR)
 - Half-Life: Alyx
 - Pavlov VR
 - Pistol Whip
 - PokerStars VR
+- Project Wingman
+- Propagation VR
 - Rec Room
-- SkyrimVR
+- Skyrim VR
 - The Walking Dead: Saints & Sinners
 - VailVR
 - Zenith MMO

@@ -101,11 +101,13 @@ int main(int argc, char *argv[])
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
 
+#if defined(WIN32)
 	// Minimize the window if user wants to
 	if (minimizeOnStart == 1)
 		ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
 	else if (minimizeOnStart == 2)
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
+#endif
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);

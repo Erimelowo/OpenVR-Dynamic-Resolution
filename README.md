@@ -24,6 +24,8 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `autoStart`: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.
 
+- `minimizeOnStart`: (0 = show, 1 = minimize, 2 = hide) Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.
+
 - `initialRes`: The resolution the program sets when starting.
 
 - `minRes`: The minimum value the program will be allowed to set your HMD's resolution to.

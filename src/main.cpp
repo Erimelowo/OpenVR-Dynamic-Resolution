@@ -15,6 +15,7 @@ using namespace vr;
 static constexpr const char *version = "0.2.1";
 
 int autoStart = 1;
+int minimizeOnStart = 0;
 float initialRes = 1.0f;
 
 float minRes = 0.60;
@@ -42,7 +43,9 @@ bool loadSettings()
 
 	// Get setting values
 	autoStart = std::stoi(ini.GetValue("Initialization", "autoStart", std::to_string(autoStart).c_str()));
+	minimizeOnStart = std::stoi(ini.GetValue("Initialization", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
 	initialRes = std::stof(ini.GetValue("Initialization", "initialRes", std::to_string(initialRes * 100.0f).c_str())) / 100.0f;
+
 	minRes = std::stof(ini.GetValue("Resolution change", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
 	maxRes = std::stof(ini.GetValue("Resolution change", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
 	dataPullDelayMs = std::stol(ini.GetValue("Resolution change", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str()));
@@ -97,6 +100,12 @@ int main(int argc, char *argv[])
 
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
+
+	// Minimize the window if user wants to
+	if (minimizeOnStart == 1)
+		ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
+	else if (minimizeOnStart == 2)
+		ShowWindow(GetConsoleWindow(), SW_HIDE);
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);

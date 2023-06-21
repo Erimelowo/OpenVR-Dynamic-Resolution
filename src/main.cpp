@@ -12,7 +12,7 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "0.2.1";
+static constexpr const char *version = "0.2.2";
 
 int autoStart = 1;
 int minimizeOnStart = 0;

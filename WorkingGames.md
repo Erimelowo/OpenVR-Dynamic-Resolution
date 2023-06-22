@@ -19,20 +19,15 @@ List of working and non-working games. Games not on this list have not been test
 
 ## Non-working games
 
+- Any Unreal Engine 4 game (the engine doesn't support resolution changes through OpenVR calls)
 - After The Fall
 - Beat Saber
 - Blaston
-- Bullet Train (through Revive)
 - BONELAB
 - Google Chrome (WebXR)
 - Half-Life: Alyx
-- Pavlov VR
 - Pistol Whip
 - PokerStars VR
-- Project Wingman
-- Propagation VR
 - Rec Room
 - Skyrim VR
-- The Walking Dead: Saints & Sinners
-- VailVR
 - Zenith MMO

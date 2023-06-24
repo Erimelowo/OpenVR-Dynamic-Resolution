@@ -10,6 +10,10 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+      - name: Set up CUDA
+        uses: nvidia/setup-cuda@v1
+        with:
+          cuda-version: 12.1
       - name: Configure
         run: cmake -B build
       - name: Build Debug

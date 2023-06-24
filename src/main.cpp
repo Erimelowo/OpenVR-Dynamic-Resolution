@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 							   resIncreaseScale) +
 							  resIncreaseMin;
 				}
-				else if ((averageGpuTime > targetGpuTime * resDecreaseThreshold))
+				else if (averageGpuTime > targetGpuTime * resDecreaseThreshold)
 				{
 					newRes -= (((averageGpuTime - (targetGpuTime * resDecreaseThreshold)) / targetGpuTime) *
 							   resDecreaseScale) +

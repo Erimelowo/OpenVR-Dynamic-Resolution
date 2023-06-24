@@ -55,10 +55,14 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 - `resetOnThreshold`: (0 = disabled, 1 = enabled) Enabling will reset the resolution to initialRes whenever minGpuTimeThreshold is met. Useful if you wanna go from playing a supported game to an unsuported games without having to reset your resolution/the program/SteamVR.
 
 - `alwaysReproject`: (0 = disabled, 1 = enabled) Enabling will double the target frametime, so if you're at a target FPS of 120, it'll target 60. Useful if you have a bad CPU but good GPU.
+- `vramTarget`: Your target vram usage in percents. Once your vram usage exceeds this point, the resolution will stop increasing.  
+- `vramLimit`: Your maximum vram usage in percents. Once your vram usage exceeds this point, the resolution will start decreasing.
 
 ## Building from source
 
-We assume that you already have Git and CMake installed. Run:
+We assume that you already have Git, Cuda and CMake installed.  
+Depending on where you installed cuda, you may need to edit the include and lib paths in the CMakeLists.txt file.
+Run:
 
 ```
 git clone --recursive https://github.com/Louka3000/OpenVR-Dynamic-Resolution.git

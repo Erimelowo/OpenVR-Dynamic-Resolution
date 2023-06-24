@@ -242,6 +242,8 @@ int main(int argc, char *argv[])
 		std::string displayedAverageTime = std::to_string(averageGpuTime).substr(0, 4);
 		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 
+		std::string vramUsage = std::to_string(getVramUsage()*100).substr(0, 4);
+		mvprintw(9, 0, "%s", fmt::format("VRAM usage: {} %", vramUsage).c_str());
 		if (frameRepeat > 1)
 		{
 			mvprintw(10, 0, "Reprojecting: Yes");

@@ -8,6 +8,9 @@
 
 #include "SimpleIni.h"
 #include "setup.hpp"
+#include <iostream>
+#include <Windows.h>
+#include <nvml.h>
 
 using namespace std::chrono_literals;
 using namespace vr;
@@ -32,6 +35,41 @@ float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 3;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
+
+
+
+float getVramUsage() {
+    nvmlReturn_t result;
+    nvmlDevice_t device;
+    nvmlMemory_t memory;
+    unsigned int deviceCount;
+
+    // Initialize NVML library
+    result = nvmlInit();
+    if (NVML_SUCCESS != result) {
+        return -1.0f;
+    }
+
+    // Get device handle
+    result = nvmlDeviceGetHandleByIndex(0, &device);
+    if (NVML_SUCCESS != result) {
+        nvmlShutdown();
+        return -1.0f;
+    }
+
+    // Get memory info
+    result = nvmlDeviceGetMemoryInfo(device, &memory);
+    if (NVML_SUCCESS != result) {
+        nvmlShutdown();
+        return -1.0f;
+    }
+
+    // Shutdown NVML library
+    nvmlShutdown();
+
+    // Return VRAM usage as a percentage
+    return (float)memory.used / (float)memory.total;
+}
 
 bool loadSettings()
 {

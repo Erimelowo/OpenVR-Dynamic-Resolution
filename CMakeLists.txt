@@ -26,9 +26,10 @@ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH $ORIGIN)
 
+include_directories("C:/Users/kaisc/AppData/Local/Temp/cuda/cuda_nvml_dev/nvml_dev/include")
 # Project
 add_executable("${PROJECT_NAME}" "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
-target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only ${CURSES_LIBRARIES})
+target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only ${CURSES_LIBRARIES} "C:/Users/kaisc/AppData/Local/Temp/cuda/cuda_nvml_dev/nvml_dev/lib/x64/nvml.lib")
 target_include_directories("${PROJECT_NAME}" PUBLIC ${protos_OUTPUT_DIR} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 

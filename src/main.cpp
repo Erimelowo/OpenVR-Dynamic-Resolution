@@ -35,7 +35,8 @@ float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 3;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
-
+int vramLimit = 90;
+int vramTarget = 80;
 
 
 float getVramUsage() {
@@ -98,6 +99,8 @@ bool loadSettings()
 	dataAverageSamples = std::stoi(ini.GetValue("Resolution change", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
 	resetOnThreshold = std::stoi(ini.GetValue("Resolution change", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
 	alwaysReproject = std::stoi(ini.GetValue("Resolution change", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
+	vramLimit = std::stoi(ini.GetValue("Resolution change", "vramLimit", std::to_string(vramLimit).c_str()));
+	vramTarget = std::stoi(ini.GetValue("Resolution change", "vramTarget", std::to_string(vramTarget).c_str()));
 	return true;
 }
 
@@ -243,7 +246,8 @@ int main(int argc, char *argv[])
 		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 
 		std::string vramUsage = std::to_string(getVramUsage()*100).substr(0, 4);
-		mvprintw(9, 0, "%s", fmt::format("VRAM usage: {} %", vramUsage).c_str());
+		std::string vramLimitString = std::to_string(vramTarget).substr(0, 4);
+		mvprintw(9, 0, "%s", fmt::format("VRAM usage: {} %, target: {} %", vramUsage, vramLimitString).c_str());
 		if (frameRepeat > 1)
 		{
 			mvprintw(10, 0, "Reprojecting: Yes");
@@ -272,30 +276,42 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
+			bool vramLimitReached = vramLimit<(int)(getVramUsage()*100);
+			bool vramTargetReached = vramTarget<(int)(getVramUsage()*100);
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
 			{
 				// Calculate new resolution
 				float newRes = currentRes;
-				if (averageGpuTime < targetGpuTime * resIncreaseThreshold)
+				if (averageGpuTime < targetGpuTime * resIncreaseThreshold && !vramTargetReached)
 				{
 					newRes += ((((targetGpuTime * resIncreaseThreshold) - averageGpuTime) / targetGpuTime) *
 							   resIncreaseScale) +
 							  resIncreaseMin;
 				}
-				else if (averageGpuTime > targetGpuTime * resDecreaseThreshold)
+				else if ((averageGpuTime > targetGpuTime * resDecreaseThreshold))
 				{
 					newRes -= (((averageGpuTime - (targetGpuTime * resDecreaseThreshold)) / targetGpuTime) *
 							   resDecreaseScale) +
 							  resDecreaseMin;
 				}
 				// Clamp resolution
-				if (newRes > maxRes)
-					newRes = maxRes;
-				else if (newRes < minRes)
-					newRes = minRes;
+				newRes=std::clamp(newRes, minRes, maxRes);
 
+				if (vramTargetReached)
+				{	
+
+					if (lastRes < newRes){
+						//make sure the resolution doesnt ever increase when the vram target is reached
+						newRes = lastRes;
+					}
+					if (vramLimitReached){
+						//force the resolution to decrease when the vram limit is reached
+						newRes -= resDecreaseMin;
+					}
+				}
+				newRes=std::clamp(newRes, minRes, maxRes);
 				// Sets the new resolution
 				if (lastRes != newRes)
 				{

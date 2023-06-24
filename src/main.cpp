@@ -8,8 +8,6 @@
 
 #include "SimpleIni.h"
 #include "setup.hpp"
-#include <iostream>
-#include <Windows.h>
 #include <nvml.h>
 
 using namespace std::chrono_literals;

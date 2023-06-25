@@ -10,10 +10,10 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - name: Install CUDA
-        run: |
-          Invoke-WebRequest -Uri "https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_531.14_windows.exe" -OutFile "cuda_installer.exe"
-          Start-Process -Wait -FilePath "cuda_installer.exe" -ArgumentList "-s" 
+      - uses: Jimver/cuda-toolkit@v0.2.10
+        id: cuda-toolkit
+        with:
+          cuda: '12.1.0'
       - name: Configure
         run: cmake -B build
       - name: Build Debug

@@ -367,3 +367,5 @@ FodyWeavers.xsd
 build/
 .vscode/
 cmake-build-debug/
+
+cuda_installer.exe

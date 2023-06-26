@@ -5,10 +5,10 @@
 #include <args.hxx>
 #include <curses.h>
 #include <stdlib.h>
+#include <nvml.h>
 
 #include "SimpleIni.h"
 #include "setup.hpp"
-#include <nvml.h>
 
 using namespace std::chrono_literals;
 using namespace vr;
@@ -33,45 +33,49 @@ float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 3;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
-int vramLimit = 90;
 int vramTarget = 80;
+int vramLimit = 90;
 int vramMonitorEnabled = 1;
 
-
-float getVramUsage() {
-	if (vramMonitorEnabled == 0){
+float getVramUsage()
+{
+	if (vramMonitorEnabled == 0)
+	{
 		return 0.0f;
 	}
-    nvmlReturn_t result;
-    nvmlDevice_t device;
-    nvmlMemory_t memory;
-    unsigned int deviceCount;
+	nvmlReturn_t result;
+	nvmlDevice_t device;
+	nvmlMemory_t memory;
+	unsigned int deviceCount;
 
-    // Initialize NVML library
-    result = nvmlInit();
-    if (NVML_SUCCESS != result) {
-        return -1.0f;
-    }
+	// Initialize NVML library
+	result = nvmlInit();
+	if (NVML_SUCCESS != result)
+	{
+		return -1.0f;
+	}
 
-    // Get device handle
-    result = nvmlDeviceGetHandleByIndex(0, &device);
-    if (NVML_SUCCESS != result) {
-        nvmlShutdown();
-        return -1.0f;
-    }
+	// Get device handle
+	result = nvmlDeviceGetHandleByIndex(0, &device);
+	if (NVML_SUCCESS != result)
+	{
+		nvmlShutdown();
+		return -1.0f;
+	}
 
-    // Get memory info
-    result = nvmlDeviceGetMemoryInfo(device, &memory);
-    if (NVML_SUCCESS != result) {
-        nvmlShutdown();
-        return -1.0f;
-    }
+	// Get memory info
+	result = nvmlDeviceGetMemoryInfo(device, &memory);
+	if (NVML_SUCCESS != result)
+	{
+		nvmlShutdown();
+		return -1.0f;
+	}
 
-    // Shutdown NVML library
-    nvmlShutdown();
+	// Shutdown NVML library
+	nvmlShutdown();
 
-    // Return VRAM usage as a percentage
-    return (float)memory.used / (float)memory.total;
+	// Return VRAM usage as a percentage
+	return (float)memory.used / (float)memory.total;
 }
 
 bool loadSettings()
@@ -248,7 +252,7 @@ int main(int argc, char *argv[])
 		std::string displayedAverageTime = std::to_string(averageGpuTime).substr(0, 4);
 		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 
-		std::string vramUsage = std::to_string(getVramUsage()*100).substr(0, 4);
+		std::string vramUsage = std::to_string(getVramUsage() * 100).substr(0, 4);
 		std::string vramLimitString = std::to_string(vramTarget).substr(0, 4);
 		mvprintw(9, 0, "%s", fmt::format("VRAM usage: {} %, target: {} %", vramUsage, vramLimitString).c_str());
 		if (frameRepeat > 1)
@@ -279,8 +283,8 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
-			bool vramLimitReached = vramLimit<(int)(getVramUsage()*100) && vramMonitorEnabled;
-			bool vramTargetReached = vramTarget<(int)(getVramUsage()*100) && vramMonitorEnabled;
+			bool vramLimitReached = vramLimit < (int)(getVramUsage() * 100) && vramMonitorEnabled;
+			bool vramTargetReached = vramTarget < (int)(getVramUsage() * 100) && vramMonitorEnabled;
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
@@ -299,22 +303,26 @@ int main(int argc, char *argv[])
 							   resDecreaseScale) +
 							  resDecreaseMin;
 				}
-				// Clamp resolution
-				newRes=std::clamp(newRes, minRes, maxRes);
+				// Clamp the new resolution
+				newRes = std::clamp(newRes, minRes, maxRes);
 
 				if (vramTargetReached)
-				{	
-
-					if (lastRes < newRes){
-						//make sure the resolution doesnt ever increase when the vram target is reached
+				{
+					if (lastRes < newRes)
+					{
+						// Make sure the resolution doesn't ever increase when the vram target is reached
 						newRes = lastRes;
 					}
-					if (vramLimitReached){
-						//force the resolution to decrease when the vram limit is reached
+					if (vramLimitReached)
+					{
+						// Force the resolution to decrease when the vram limit is reached
 						newRes -= resDecreaseMin;
 					}
+
+					// Clamp the new resolution again
+					newRes = std::clamp(newRes, minRes, maxRes);
 				}
-				newRes=std::clamp(newRes, minRes, maxRes);
+
 				// Sets the new resolution
 				if (lastRes != newRes)
 				{
@@ -333,7 +341,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		// Displays the information
 		refresh();
+
 		// Calculate how long to sleep for
 		long sleepTime = dataPullDelayMs;
 		if (dataPullDelayMs < currentTime - lastChangeTime &&

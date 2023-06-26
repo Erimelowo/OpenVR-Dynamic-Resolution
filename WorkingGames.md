@@ -6,7 +6,9 @@ List of working and non-working games. Games not on this list have not been test
 - BONEWORKS
 - ChilloutVR
 - H3VR
+- Hellsweeper VR (Next Fest demo)
 - NeosVR
+- OVRLRD
 - Space Pirate Trainer
 - The Forest
 - Until You Fall
@@ -19,20 +21,26 @@ List of working and non-working games. Games not on this list have not been test
 
 ## Non-working games
 
+- Any Unreal Engine game (the engine doesn't support resolution changes through OpenVR calls)
 - After The Fall
 - Beat Saber
 - Blaston
-- Bullet Train (through Revive)
+- Bullet Train (through Revive) [UE4]
 - BONELAB
+- Contractors [UE4]
 - Google Chrome (WebXR)
 - Half-Life: Alyx
-- Pavlov VR
+- Hellsplit Arena [UE4]
+- Pavlov VR [UE5]
+- Phantom: Covert Ops (through Revive) [UE4]
 - Pistol Whip
 - PokerStars VR
-- Project Wingman
-- Propagation VR
+- Project Wingman [UE4]
+- Propagation VR [UE4]
+- Ragnarock [UE4]
 - Rec Room
 - Skyrim VR
-- The Walking Dead: Saints & Sinners
-- VailVR
+- Sprint Vector [UE4]
+- The Walking Dead: Saints & Sinners [UE4]
+- Vail VR [UE5]
 - Zenith MMO

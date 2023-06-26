@@ -35,9 +35,13 @@ int resetOnThreshold = 1;
 int alwaysReproject = 0;
 int vramLimit = 90;
 int vramTarget = 80;
+int vramMonitorEnabled = 1;
 
 
 float getVramUsage() {
+	if (vramMonitorEnabled == 0){
+		return 0.0f;
+	}
     nvmlReturn_t result;
     nvmlDevice_t device;
     nvmlMemory_t memory;
@@ -99,6 +103,7 @@ bool loadSettings()
 	alwaysReproject = std::stoi(ini.GetValue("Resolution change", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
 	vramLimit = std::stoi(ini.GetValue("Resolution change", "vramLimit", std::to_string(vramLimit).c_str()));
 	vramTarget = std::stoi(ini.GetValue("Resolution change", "vramTarget", std::to_string(vramTarget).c_str()));
+	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution change", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
 	return true;
 }
 
@@ -274,8 +279,8 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
-			bool vramLimitReached = vramLimit<(int)(getVramUsage()*100);
-			bool vramTargetReached = vramTarget<(int)(getVramUsage()*100);
+			bool vramLimitReached = vramLimit<(int)(getVramUsage()*100) && vramMonitorEnabled;
+			bool vramTargetReached = vramTarget<(int)(getVramUsage()*100) && vramMonitorEnabled;
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)

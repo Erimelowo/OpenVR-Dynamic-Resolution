@@ -5,6 +5,7 @@
 #include <args.hxx>
 #include <curses.h>
 #include <stdlib.h>
+#include <nvml.h>
 
 #include "SimpleIni.h"
 #include "setup.hpp"
@@ -12,7 +13,7 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "0.2.2";
+static constexpr const char *version = "v.0.3.0-rc.1";
 
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -32,6 +33,50 @@ float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 3;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
+float vramTarget = 0.8;
+float vramLimit = 0.9;
+int vramMonitorEnabled = 1;
+
+float getVramUsage()
+{
+	if (vramMonitorEnabled == 0)
+	{
+		return 0.0f;
+	}
+	nvmlReturn_t result;
+	nvmlDevice_t device;
+	nvmlMemory_t memory;
+	unsigned int deviceCount;
+
+	// Initialize NVML library
+	result = nvmlInit();
+	if (NVML_SUCCESS != result)
+	{
+		return -1.0f;
+	}
+
+	// Get device handle
+	result = nvmlDeviceGetHandleByIndex(0, &device);
+	if (NVML_SUCCESS != result)
+	{
+		nvmlShutdown();
+		return -1.0f;
+	}
+
+	// Get memory info
+	result = nvmlDeviceGetMemoryInfo(device, &memory);
+	if (NVML_SUCCESS != result)
+	{
+		nvmlShutdown();
+		return -1.0f;
+	}
+
+	// Shutdown NVML library
+	nvmlShutdown();
+
+	// Return VRAM usage as a percentage
+	return (float)memory.used / (float)memory.total;
+}
 
 bool loadSettings()
 {
@@ -60,6 +105,9 @@ bool loadSettings()
 	dataAverageSamples = std::stoi(ini.GetValue("Resolution change", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
 	resetOnThreshold = std::stoi(ini.GetValue("Resolution change", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
 	alwaysReproject = std::stoi(ini.GetValue("Resolution change", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
+	vramLimit = std::stoi(ini.GetValue("Resolution change", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
+	vramTarget = std::stoi(ini.GetValue("Resolution change", "vramTarget", std::to_string(vramTarget * 100.0f).c_str())) / 100.0f;
+	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution change", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
 	return true;
 }
 
@@ -76,7 +124,7 @@ int main(int argc, char *argv[])
 	initscr();			 // Initialize screen
 	cbreak();			 // Disable line-buffering (for input)
 	noecho();			 // Don't show what the user types
-	resize_term(17, 64); // Sets the initial (y, x) resolution
+	resize_term(18, 64); // Sets the initial (y, x) resolution
 
 	// Check for errors
 	EVRInitError init_error = VRInitError_None;
@@ -101,12 +149,17 @@ int main(int argc, char *argv[])
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
 
-#if defined(WIN32)
+#if defined(_WIN32)
 	// Minimize the window if user wants to
 	if (minimizeOnStart == 1)
 		ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
 	else if (minimizeOnStart == 2)
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
+#endif
+
+#if defined(__linux__)
+	// VRAM monitoring is not supported on Linux
+	vramMonitorEnabled = false;
 #endif
 
 	// Set auto-start
@@ -189,7 +242,7 @@ int main(int argc, char *argv[])
 
 		// Write info to console
 		attron(A_UNDERLINE);
-		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution v.{}", version).c_str());
+		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution {}", version).c_str());
 		attroff(A_UNDERLINE);
 		if (settingsLoaded)
 			mvprintw(1, 0, "%s", fmt::format("settings.ini successfully loaded").c_str());
@@ -199,14 +252,32 @@ int main(int argc, char *argv[])
 		mvprintw(4, 0, "%s", fmt::format("Target FPS: {} fps", std::to_string(int(targetFps))).c_str());
 		std::string displayedTime = std::to_string(targetGpuTime).substr(0, 4);
 		mvprintw(5, 0, "%s", fmt::format("Target GPU frametime: {} ms", displayedTime).c_str());
+		if (vramMonitorEnabled)
+		{
+			std::string vramLimitString = std::to_string(vramLimit * 100).substr(0, 4);
+			mvprintw(6, 0, "%s", fmt::format("VRAM limit: {}%", vramLimitString).c_str());
+		}
+		else
+		{
+			mvprintw(6, 0, "%s", fmt::format("VRAM limit: Disabled").c_str());
+		}
 
-		mvprintw(7, 0, "%s", fmt::format("VSync'd FPS: {} fps", std::to_string(currentFps)).c_str());
+		mvprintw(8, 0, "%s", fmt::format("VSync'd FPS: {} fps", std::to_string(currentFps)).c_str());
 		std::string displayedAverageTime = std::to_string(averageGpuTime).substr(0, 4);
-		mvprintw(8, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
+		mvprintw(9, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
+		if (vramMonitorEnabled)
+		{
+			std::string vramUsage = std::to_string(getVramUsage() * 100).substr(0, 4);
+			mvprintw(10, 0, "%s", fmt::format("VRAM usage: {}%", vramUsage).c_str());
+		}
+		else
+		{
+			mvprintw(10, 0, "%s", fmt::format("VRAM usage: Disabled").c_str());
+		}
 
 		if (frameRepeat > 1)
 		{
-			mvprintw(10, 0, "Reprojecting: Yes");
+			mvprintw(12, 0, "Reprojecting: Yes");
 
 			char const *reason = "Other";
 			if (reprojectionFlag == 20)
@@ -217,28 +288,30 @@ int main(int argc, char *argv[])
 				reason = "Prediction mask";
 			else if (reprojectionFlag == 3840)
 				reason = "Throttle mask";
-			mvprintw(11, 0, "%s", fmt::format("Reprojection reason: {}", reason).c_str());
+			mvprintw(13, 0, "%s", fmt::format("Reprojection reason: {}", reason).c_str());
 		}
 		else
 		{
-			mvprintw(10, 0, "Reprojecting: No");
+			mvprintw(12, 0, "Reprojecting: No");
 		}
 
 		attron(A_BOLD);
-		mvprintw(13, 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(currentRes * 100))).c_str());
+		mvprintw(15, 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(currentRes * 100))).c_str());
 		attroff(A_BOLD);
 
 		// Adjust resolution
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
+			bool vramLimitReached = vramLimit < getVramUsage() && vramMonitorEnabled;
+			bool vramTargetReached = vramTarget < getVramUsage() && vramMonitorEnabled;
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
 			{
 				// Calculate new resolution
 				float newRes = currentRes;
-				if (averageGpuTime < targetGpuTime * resIncreaseThreshold)
+				if (averageGpuTime < targetGpuTime * resIncreaseThreshold && !vramTargetReached)
 				{
 					newRes += ((((targetGpuTime * resIncreaseThreshold) - averageGpuTime) / targetGpuTime) *
 							   resIncreaseScale) +
@@ -250,11 +323,25 @@ int main(int argc, char *argv[])
 							   resDecreaseScale) +
 							  resDecreaseMin;
 				}
-				// Clamp resolution
-				if (newRes > maxRes)
-					newRes = maxRes;
-				else if (newRes < minRes)
-					newRes = minRes;
+				// Clamp the new resolution
+				newRes = std::clamp(newRes, minRes, maxRes);
+
+				if (vramTargetReached)
+				{
+					if (lastRes < newRes)
+					{
+						// Make sure the resolution doesn't ever increase when the vram target is reached
+						newRes = lastRes;
+					}
+					if (vramLimitReached)
+					{
+						// Force the resolution to decrease when the vram limit is reached
+						newRes -= resDecreaseMin;
+					}
+
+					// Clamp the new resolution again
+					newRes = std::clamp(newRes, minRes, maxRes);
+				}
 
 				// Sets the new resolution
 				if (lastRes != newRes)
@@ -274,7 +361,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		// Displays the information
 		refresh();
+
 		// Calculate how long to sleep for
 		long sleepTime = dataPullDelayMs;
 		if (dataPullDelayMs < currentTime - lastChangeTime &&

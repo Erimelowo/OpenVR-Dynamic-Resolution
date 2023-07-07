@@ -13,7 +13,7 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "0.2.3";
+static constexpr const char *version = "v.0.3.0-rc.1";
 
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
 
 		// Write info to console
 		attron(A_UNDERLINE);
-		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution v.{}", version).c_str());
+		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution {}", version).c_str());
 		attroff(A_UNDERLINE);
 		if (settingsLoaded)
 			mvprintw(1, 0, "%s", fmt::format("settings.ini successfully loaded").c_str());

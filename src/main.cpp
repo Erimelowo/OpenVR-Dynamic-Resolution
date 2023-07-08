@@ -13,7 +13,7 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v.0.3.0";
+static constexpr const char *version = "v.0.3.1";
 
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -37,6 +37,8 @@ float vramTarget = 0.8;
 float vramLimit = 0.9;
 int vramMonitorEnabled = 1;
 
+nvmlDevice_t nvmlDevice;
+
 float getVramUsage()
 {
 	if (vramMonitorEnabled == 0)
@@ -44,35 +46,15 @@ float getVramUsage()
 		return 0.0f;
 	}
 	nvmlReturn_t result;
-	nvmlDevice_t device;
 	nvmlMemory_t memory;
 	unsigned int deviceCount;
 
-	// Initialize NVML library
-	result = nvmlInit();
-	if (NVML_SUCCESS != result)
-	{
-		return -1.0f;
-	}
-
-	// Get device handle
-	result = nvmlDeviceGetHandleByIndex(0, &device);
-	if (NVML_SUCCESS != result)
-	{
-		nvmlShutdown();
-		return -1.0f;
-	}
-
 	// Get memory info
-	result = nvmlDeviceGetMemoryInfo(device, &memory);
-	if (NVML_SUCCESS != result)
+	result = nvmlDeviceGetMemoryInfo(nvmlDevice, &memory);
+	if (result != NVML_SUCCESS)
 	{
-		nvmlShutdown();
 		return -1.0f;
 	}
-
-	// Shutdown NVML library
-	nvmlShutdown();
 
 	// Return VRAM usage as a percentage
 	return (float)memory.used / (float)memory.total;
@@ -184,6 +166,26 @@ int main(int argc, char *argv[])
 	// Set default resolution
 	vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
+
+	// Initialise VRAM monitoring stuff
+	if (vramMonitorEnabled == 1)
+	{
+		nvmlReturn_t result;
+		// Initialize NVML library
+		result = nvmlInit();
+		if (NVML_SUCCESS != result)
+		{
+			vramMonitorEnabled = 0;
+		}
+
+		// Get device handle
+		result = nvmlDeviceGetHandleByIndex(0, &nvmlDevice);
+		if (NVML_SUCCESS != result)
+		{
+			nvmlShutdown();
+			vramMonitorEnabled = 0;
+		}
+	}
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();
@@ -303,8 +305,8 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
-			bool vramLimitReached = vramLimit < getVramUsage() && vramMonitorEnabled;
-			bool vramTargetReached = vramTarget < getVramUsage() && vramMonitorEnabled;
+			bool vramLimitReached = vramLimit < getVramUsage();
+			bool vramTargetReached = vramTarget < getVramUsage();
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)

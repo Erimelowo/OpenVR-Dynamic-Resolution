@@ -5,7 +5,9 @@
 #include <args.hxx>
 #include <curses.h>
 #include <stdlib.h>
+#if __has_include("nvml.h")
 #include <nvml.h>
+#endif
 
 #include "SimpleIni.h"
 #include "setup.hpp"
@@ -37,7 +39,9 @@ float vramTarget = 0.8;
 float vramLimit = 0.9;
 int vramMonitorEnabled = 1;
 
+#if __has_include("nvml.h")
 nvmlDevice_t nvmlDevice;
+#endif
 
 float getVramUsage()
 {
@@ -45,6 +49,7 @@ float getVramUsage()
 	{
 		return 0.0f;
 	}
+	#if __has_include("nvml.h")
 	nvmlReturn_t result;
 	nvmlMemory_t memory;
 	unsigned int deviceCount;
@@ -58,6 +63,9 @@ float getVramUsage()
 
 	// Return VRAM usage as a percentage
 	return (float)memory.used / (float)memory.total;
+	#endif
+
+	return 0.0f;
 }
 
 bool loadSettings()
@@ -168,6 +176,7 @@ int main(int argc, char *argv[])
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
 
 	// Initialise VRAM monitoring stuff
+	#if __has_include("nvml.h")
 	if (vramMonitorEnabled == 1)
 	{
 		nvmlReturn_t result;
@@ -186,6 +195,7 @@ int main(int argc, char *argv[])
 			vramMonitorEnabled = 0;
 		}
 	}
+	#endif
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();

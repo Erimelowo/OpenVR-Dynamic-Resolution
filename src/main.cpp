@@ -139,7 +139,7 @@ long getCurrentTimeMillis()
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
-	HMODULE nvmlLibrary = LoadLibraryA("nvm.dll");
+	HMODULE nvmlLibrary = LoadLibraryA("nvml.dll");
 #else
 	void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 #endif

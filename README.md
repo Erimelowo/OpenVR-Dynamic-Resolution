@@ -61,9 +61,7 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 ## Building from source
 
-We assume that you already have Git, Cuda and CMake installed.
-Depending on where you installed cuda, you may need to edit the include and lib paths in the CMakeLists.txt file.  
-It is assumed that you have cuda 12.1, however, older versions may work if the path is specified.  
+We assume that you already have Git and CMake installed.
 To build the project, run:
 
 ```

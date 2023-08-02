@@ -5,8 +5,10 @@
 #include <args.hxx>
 #include <curses.h>
 #include <stdlib.h>
-#if __has_include("nvml.h")
-#include <nvml.h>
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <dlfcn.h>
 #endif
 
 #include "SimpleIni.h"
@@ -15,7 +17,7 @@
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v.0.3.1";
+static constexpr const char *version = "v.0.3.2";
 
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -39,33 +41,53 @@ float vramTarget = 0.8;
 float vramLimit = 0.9;
 int vramMonitorEnabled = 1;
 
-#if __has_include("nvml.h")
-nvmlDevice_t nvmlDevice;
-#endif
-
-float getVramUsage()
+// NVML stuff
+typedef enum nvmlReturn_enum
 {
-	if (vramMonitorEnabled == 0)
-	{
+	NVML_SUCCESS = 0,					// The operation was successful.
+	NVML_ERROR_UNINITIALIZED = 1,		// NVML was not first initialized with nvmlInit().
+	NVML_ERROR_INVALID_ARGUMENT = 2,	// A supplied argument is invalid.
+	NVML_ERROR_NOT_SUPPORTED = 3,		// The requested operation is not available on target device.
+	NVML_ERROR_NO_PERMISSION = 4,		// The currrent user does not have permission for operation.
+	NVML_ERROR_ALREADY_INITIALIZED = 5, // NVML has already been initialized.
+	NVML_ERROR_NOT_FOUND = 6,			// A query to find an object was unccessful.
+	NVML_ERROR_UNKNOWN = 7,				// An internal driver error occurred.
+} nvmlReturn_t;
+typedef nvmlReturn_t (*nvmlInit_t)();
+typedef nvmlReturn_t (*nvmlShutdown_t)();
+typedef struct
+{
+	unsigned long long total;
+	unsigned long long free;
+	unsigned long long used;
+} nvmlMemory_t;
+typedef nvmlReturn_t (*nvmlDevice_t)();
+typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t *);
+typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t, nvmlMemory_t *);
+nvmlDevice_t nvmlDevice;
+
+float getVramUsage(HMODULE nvmlLibrary)
+{
+	if (vramMonitorEnabled == 0 || !nvmlLibrary)
 		return 0.0f;
-	}
-	#if __has_include("nvml.h")
+
 	nvmlReturn_t result;
-	nvmlMemory_t memory;
+	nvmlMemory_t memoryInfo;
 	unsigned int deviceCount;
 
 	// Get memory info
-	result = nvmlDeviceGetMemoryInfo(nvmlDevice, &memory);
+	nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
+#ifdef _WIN32
+	nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#else
+	nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#endif
+	result = nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &memoryInfo);
 	if (result != NVML_SUCCESS)
-	{
-		return -1.0f;
-	}
+		return -result;
 
 	// Return VRAM usage as a percentage
-	return (float)memory.used / (float)memory.total;
-	#endif
-
-	return 0.0f;
+	return (float)memoryInfo.used / (float)memoryInfo.total;
 }
 
 bool loadSettings()
@@ -110,6 +132,12 @@ long getCurrentTimeMillis()
 
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32
+	HMODULE nvmlLibrary = LoadLibraryA("nvml.dll");
+#else
+	void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
+#endif
+
 	int rows, cols;		 // max rows and cols
 	initscr();			 // Initialize screen
 	cbreak();			 // Disable line-buffering (for input)
@@ -118,11 +146,9 @@ int main(int argc, char *argv[])
 
 	// Check for errors
 	EVRInitError init_error = VRInitError_None;
-	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
-		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
+    IVRSystem* pVRSystem = static_cast<vr::IVRSystem*>(vr::VR_Init(&init_error, vr::VRApplication_Background));
 	if (init_error != VRInitError_None)
 	{
-		system = nullptr;
 		printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
 		refresh();
 		std::this_thread::sleep_for(4000ms);
@@ -145,11 +171,6 @@ int main(int argc, char *argv[])
 		ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
 	else if (minimizeOnStart == 2)
 		ShowWindow(GetConsoleWindow(), SW_HIDE);
-#endif
-
-#if defined(__linux__)
-	// VRAM monitoring is not supported on Linux
-	vramMonitorEnabled = false;
 #endif
 
 	// Set auto-start
@@ -175,27 +196,50 @@ int main(int argc, char *argv[])
 	vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
 
-	// Initialise VRAM monitoring stuff
-	#if __has_include("nvml.h")
+	// Initialise NVML
+	nvmlInit_t nvmlInitPtr;
+#ifdef _WIN32
+	nvmlInitPtr = (nvmlInit_t)GetProcAddress(nvmlLibrary, "nvmlInit");
+#else
+	nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlShutdown");
+#endif
+	if (!nvmlInitPtr)
+		vramMonitorEnabled = 0;
 	if (vramMonitorEnabled == 1)
 	{
 		nvmlReturn_t result;
 		// Initialize NVML library
-		result = nvmlInit();
-		if (NVML_SUCCESS != result)
-		{
+		result = nvmlInitPtr();
+		if (result != NVML_SUCCESS)
 			vramMonitorEnabled = 0;
-		}
 
 		// Get device handle
-		result = nvmlDeviceGetHandleByIndex(0, &nvmlDevice);
-		if (NVML_SUCCESS != result)
-		{
-			nvmlShutdown();
+		nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
+#ifdef _WIN32
+		nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+#else
+		nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+#endif
+		if (!nvmlDeviceGetHandleByIndexPtr)
 			vramMonitorEnabled = 0;
+		nvmlDevice_t device;
+		if (nvmlDeviceGetHandleByIndexPtr)
+			result = nvmlDeviceGetHandleByIndexPtr(0, &device);
+		if (result != NVML_SUCCESS || vramMonitorEnabled == 0)
+		{
+			nvmlShutdown_t nvmlShutdownPtr;
+#ifdef _WIN32
+			nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+#else
+			nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+#endif
+			vramMonitorEnabled = 0;
+			if (nvmlShutdownPtr)
+			{
+				nvmlShutdownPtr();
+			}
 		}
 	}
-	#endif
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();
@@ -279,8 +323,15 @@ int main(int argc, char *argv[])
 		mvprintw(9, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 		if (vramMonitorEnabled)
 		{
-			std::string vramUsage = std::to_string(getVramUsage() * 100).substr(0, 4);
-			mvprintw(10, 0, "%s", fmt::format("VRAM usage: {}%", vramUsage).c_str());
+			//std::string vramUsage = std::to_string(getVramUsage(nvmlLibrary) * 100).substr(0, 4);
+
+			uint64_t vramBytes = pVRSystem->GetDXGIOutputInfo().m_nAdapterMemoryBytes;
+
+    		// Convert to MB for simplicity
+    		float vramMB = static_cast<float>(vramBytes) / (1024.0f * 1024.0f);
+
+    		// Print VRAM usage
+			mvprintw(10, 0, "%s", fmt::format("VRAM usage: {}%", vramMB).c_str());
 		}
 		else
 		{
@@ -315,8 +366,8 @@ int main(int argc, char *argv[])
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
-			bool vramLimitReached = vramLimit < getVramUsage();
-			bool vramTargetReached = vramTarget < getVramUsage();
+			bool vramLimitReached = vramLimit < getVramUsage(nvmlLibrary);
+			bool vramTargetReached = vramTarget < getVramUsage(nvmlLibrary);
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
 			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
@@ -386,4 +437,24 @@ int main(int argc, char *argv[])
 		// ZZzzzz
 		std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
 	}
+
+	// TODO actually be able to get out of the while loop
+
+#ifdef _WIN32
+	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+	if (nvmlShutdownPtr)
+	{
+		nvmlShutdownPtr();
+	}
+	FreeLibrary(nvmlLibrary);
+#else
+	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+	if (nvmlShutdownPtr)
+	{
+		nvmlShutdownPtr();
+	}
+	dlclose(nvmlLibrary);
+#endif
+
+	return 0;
 }

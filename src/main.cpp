@@ -230,9 +230,8 @@ int main(int argc, char *argv[])
 #endif
 		if (!nvmlDeviceGetHandleByIndexPtr)
 			vramMonitorEnabled = 0;
-		nvmlDevice_t device;
-		if (nvmlDeviceGetHandleByIndexPtr)
-			result = nvmlDeviceGetHandleByIndexPtr(0, &device);
+		else
+			result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
 		if (result != NVML_SUCCESS || vramMonitorEnabled == 0)
 		{
 			nvmlShutdown_t nvmlShutdownPtr;

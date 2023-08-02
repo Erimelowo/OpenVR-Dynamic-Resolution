@@ -65,9 +65,9 @@ typedef nvmlReturn_t (*nvmlDevice_t)();
 typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t *);
 typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t, nvmlMemory_t *);
 #ifdef _WIN32
-	typedef HMODULE (nvmlLib);
+typedef HMODULE(nvmlLib);
 #else
-	typedef void * (nvmlLib);
+typedef void *(nvmlLib);
 #endif
 
 nvmlDevice_t nvmlDevice;
@@ -139,7 +139,7 @@ long getCurrentTimeMillis()
 int main(int argc, char *argv[])
 {
 #ifdef _WIN32
-	HMODULE nvmlLibrary = LoadLibraryA("nvml.dll");
+	HMODULE nvmlLibrary = LoadLibraryA("nvm.dll");
 #else
 	void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 #endif

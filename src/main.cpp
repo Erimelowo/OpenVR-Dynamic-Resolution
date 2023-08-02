@@ -64,9 +64,15 @@ typedef struct
 typedef nvmlReturn_t (*nvmlDevice_t)();
 typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t *);
 typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t, nvmlMemory_t *);
+#ifdef _WIN32
+	typedef HMODULE (nvmlLib);
+#else
+	typedef void * (nvmlLib);
+#endif
+
 nvmlDevice_t nvmlDevice;
 
-float getVramUsage(HMODULE nvmlLibrary)
+float getVramUsage(nvmlLib nvmlLibrary)
 {
 	if (vramMonitorEnabled == 0 || !nvmlLibrary)
 		return 0.0f;
@@ -146,9 +152,11 @@ int main(int argc, char *argv[])
 
 	// Check for errors
 	EVRInitError init_error = VRInitError_None;
-    IVRSystem* pVRSystem = static_cast<vr::IVRSystem*>(vr::VR_Init(&init_error, vr::VRApplication_Background));
+	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
+		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
 	if (init_error != VRInitError_None)
 	{
+		system = nullptr;
 		printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
 		refresh();
 		std::this_thread::sleep_for(4000ms);
@@ -323,15 +331,8 @@ int main(int argc, char *argv[])
 		mvprintw(9, 0, "%s", fmt::format("GPU frametime: {} ms", displayedAverageTime).c_str());
 		if (vramMonitorEnabled)
 		{
-			//std::string vramUsage = std::to_string(getVramUsage(nvmlLibrary) * 100).substr(0, 4);
-
-			uint64_t vramBytes = pVRSystem->GetDXGIOutputInfo().m_nAdapterMemoryBytes;
-
-    		// Convert to MB for simplicity
-    		float vramMB = static_cast<float>(vramBytes) / (1024.0f * 1024.0f);
-
-    		// Print VRAM usage
-			mvprintw(10, 0, "%s", fmt::format("VRAM usage: {}%", vramMB).c_str());
+			std::string vramUsage = std::to_string(getVramUsage(nvmlLibrary) * 100).substr(0, 4);
+			mvprintw(10, 0, "%s", fmt::format("VRAM usage: {}%", vramUsage).c_str());
 		}
 		else
 		{

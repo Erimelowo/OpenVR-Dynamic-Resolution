@@ -38,9 +38,9 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `minGpuTimeThreshold`: If GPU time in milliseconds is below this value, don't change resolution. Useful to avoid messing with resolution in the SteamVR void or during loading screens.
 
-- `resIncreaseMin`: How many % to increase resolution when we have GPU headroom regardless of how much.
+- `resIncreaseMin`: How many static % to increase resolution when we have GPU or VRAM headroom.
 
-- `resDecreaseMin`: How many % to decrease resolution when GPU time is too high regardless of by how much.
+- `resDecreaseMin`: How many static % to decrease resolution when GPU time or VRAM is too high.
 
 - `resIncreaseScale`: How much to increase resolution depending on GPU frametime headroom available
 
@@ -58,6 +58,7 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 - `vramTarget`: Your target vram usage in percents. Once your vram usage exceeds this point, the resolution will stop increasing.
 - `vramLimit`: Your maximum vram usage in percents. Once your vram usage exceeds this point, the resolution will start decreasing.
 - `vramMonitorEnabled`: (0 = disabled, 1 = enabled) If enabled, vram specific features will be enabled, otherwise it is assumed that free vram is always available.
+- `vramOnlyMode`: (0 = disabled, 1 = enabled) If enabled, only adjust resolution based off VRAM
 
 ## Building from source
 

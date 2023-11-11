@@ -40,6 +40,7 @@ int alwaysReproject = 0;
 float vramTarget = 0.8;
 float vramLimit = 0.9;
 int vramMonitorEnabled = 1;
+int vramOnlyMode = 0;
 
 // NVML stuff
 typedef enum nvmlReturn_enum
@@ -126,6 +127,8 @@ bool loadSettings()
 	vramLimit = std::stoi(ini.GetValue("Resolution change", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
 	vramTarget = std::stoi(ini.GetValue("Resolution change", "vramTarget", std::to_string(vramTarget * 100.0f).c_str())) / 100.0f;
 	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution change", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
+	vramOnlyMode = std::stoi(ini.GetValue("Resolution change", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
+
 	return true;
 }
 
@@ -370,17 +373,17 @@ int main(int argc, char *argv[])
 			bool vramTargetReached = vramTarget < getVramUsage(nvmlLibrary);
 			bool dashboardOpen = VROverlay()->IsDashboardVisible();
 
-			if (averageGpuTime > minGpuTimeThreshold && !dashboardOpen)
+			if ((averageGpuTime > minGpuTimeThreshold || vramOnlyMode == 1) && !dashboardOpen)
 			{
 				// Calculate new resolution
 				float newRes = currentRes;
-				if (averageGpuTime < targetGpuTime * resIncreaseThreshold && !vramTargetReached)
+				if (averageGpuTime < targetGpuTime * resIncreaseThreshold && !vramTargetReached && vramOnlyMode == 0)
 				{
 					newRes += ((((targetGpuTime * resIncreaseThreshold) - averageGpuTime) / targetGpuTime) *
 							   resIncreaseScale) +
 							  resIncreaseMin;
 				}
-				else if (averageGpuTime > targetGpuTime * resDecreaseThreshold)
+				else if (averageGpuTime > targetGpuTime * resDecreaseThreshold && vramOnlyMode == 0)
 				{
 					newRes -= (((averageGpuTime - (targetGpuTime * resDecreaseThreshold)) / targetGpuTime) *
 							   resDecreaseScale) +

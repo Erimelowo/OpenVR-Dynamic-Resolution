@@ -32,9 +32,9 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `maxRes`: The maximum value the program will be allowed to set your HMD's resolution to.
 
-- `dataPullDelayMs`: The time in milliseconds (1000ms = 1sec) the program waits to pull and display new information.
+- `dataPullDelayMs`: The time in milliseconds (1000ms = 1s) the program waits to pull and display new information. Adjust dataAverageSamples accordingly.
 
-- `resChangeDelayMs`: The delay in milliseconds (1000ms = 1sec) between each resolution change. Lowering it will make the resolution change more responsive, but will cause more stuttering from resolution changes.
+- `resChangeDelayMs`: The delay in milliseconds (1000ms = 1s) between each resolution change. Lowering it will make the resolution change more responsive, but will cause more stuttering from resolution changes.
 
 - `minGpuTimeThreshold`: If GPU time in milliseconds is below this value, don't change resolution. Useful to avoid messing with resolution in the SteamVR void or during loading screens.
 
@@ -58,7 +58,9 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 - `vramTarget`: Your target vram usage in percents. Once your vram usage exceeds this point, the resolution will stop increasing.
 - `vramLimit`: Your maximum vram usage in percents. Once your vram usage exceeds this point, the resolution will start decreasing.
 - `vramMonitorEnabled`: (0 = disabled, 1 = enabled) If enabled, vram specific features will be enabled, otherwise it is assumed that free vram is always available.
-- `vramOnlyMode`: (0 = disabled, 1 = enabled) If enabled, only adjust resolution based off VRAM
+- `vramOnlyMode`: (0 = disabled, 1 = enabled) Only adjust resolution based off VRAM; ignore GPU and CPU frametimes.
+- `preferReprojection`: (0 = disabled, 1 = enabled) If enabled, the GPU target frametime will double as soon as the CPU frametime is over the target frametime; else, the CPU frametime needs to be 2 times greater than the target frametime for the GPU target frametime to double.
+- `ignoreCpuTime`: (0 = disabled, 1 = enabled) Don't use CPU frametime to adjust resolution.
 
 ## Building from source
 

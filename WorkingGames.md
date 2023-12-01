@@ -16,9 +16,6 @@ List of working and non-working games. Games not on this list have not been test
 - Vertigo 2 Demo
 - VRChat
 
-## Working but has stutters when changing resolutions
-
-
 
 ## Non-working games
 

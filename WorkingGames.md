@@ -5,6 +5,7 @@ List of working and non-working games. Games not on this list have not been test
 - Arizona Sunshine
 - BONEWORKS
 - ChilloutVR
+- Half-Life 2: VR Mod (with stutters)
 - H3VR
 - Hellsweeper VR (Next Fest demo)
 - NeosVR
@@ -12,12 +13,12 @@ List of working and non-working games. Games not on this list have not been test
 - Space Pirate Trainer
 - The Forest
 - Until You Fall
-- Vertigo 2 Demo (make sure at least 1GB of VRAM is free)
+- Vertigo 2 Demo
 - VRChat
 
 ## Working but has stutters when changing resolutions
 
-- Half-Life 2: VR Mod
+
 
 ## Non-working games
 

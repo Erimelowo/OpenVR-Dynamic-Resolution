@@ -328,54 +328,58 @@ int main(int argc, char *argv[])
 		float vramUsage = getVramUsage(nvmlLibrary);
 
 		// Resolution handling
-		if (currentTime - resChangeDelayMs > lastChangeTime && !VROverlay()->IsDashboardVisible())
+		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
 
-			// Adjust resolution
-			if ((averageCpuTime > minCpuTimeThreshold || vramOnlyMode))
+			if (!VROverlay()->IsDashboardVisible())
 			{
-				// Frametime
-				if (averageGpuTime < targetFrametime * resIncreaseThreshold && vramUsage < vramTarget && !vramOnlyMode)
+
+				// Adjust resolution
+				if ((averageCpuTime > minCpuTimeThreshold || vramOnlyMode))
 				{
-					// Increase resolution
-					newRes += ((((targetFrametime * resIncreaseThreshold) - averageGpuTime) / targetFrametime) *
-							   resIncreaseScale) +
-							  resIncreaseMin;
+					// Frametime
+					if (averageGpuTime < targetFrametime * resIncreaseThreshold && vramUsage < vramTarget && !vramOnlyMode)
+					{
+						// Increase resolution
+						newRes += ((((targetFrametime * resIncreaseThreshold) - averageGpuTime) / targetFrametime) *
+								   resIncreaseScale) +
+								  resIncreaseMin;
+					}
+					else if (averageGpuTime > targetFrametime * resDecreaseThreshold && !vramOnlyMode)
+					{
+						// Decrease resolution
+						newRes -= (((averageGpuTime - (targetFrametime * resDecreaseThreshold)) / targetFrametime) *
+								   resDecreaseScale) +
+								  resDecreaseMin;
+					}
+
+					// VRAM
+					if (vramUsage > vramLimit)
+					{
+						// Force the resolution to decrease when the vram limit is reached
+						newRes -= resDecreaseMin;
+					}
+					else if (vramOnlyMode && newRes < initialRes && vramUsage < vramTarget)
+					{
+						// When in VRAM-only mode, make sure the res goes back up when possible.
+						newRes = min(initialRes, newRes + resIncreaseMin);
+					}
+
+					// Clamp the new resolution
+					newRes = std::clamp(newRes, minRes, maxRes);
 				}
-				else if (averageGpuTime > targetFrametime * resDecreaseThreshold && !vramOnlyMode)
+				else if (resetOnThreshold && lastRes != initialRes && averageCpuTime < minCpuTimeThreshold && !vramOnlyMode)
 				{
-					// Decrease resolution
-					newRes -= (((averageGpuTime - (targetFrametime * resDecreaseThreshold)) / targetFrametime) *
-							   resDecreaseScale) +
-							  resDecreaseMin;
+					// Reset to initialRes because CPU time fell below the threshold
+					newRes = initialRes;
 				}
 
-				// VRAM
-				if (vramUsage > vramLimit)
+				if (newRes != lastRes)
 				{
-					// Force the resolution to decrease when the vram limit is reached
-					newRes -= resDecreaseMin;
+					// Sets the new resolution
+					vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes);
 				}
-				else if (vramOnlyMode && newRes < initialRes && vramUsage < vramTarget)
-				{
-					// When in VRAM-only mode, make sure the res goes back up when possible.
-					newRes = min(initialRes, newRes + resIncreaseMin);
-				}
-
-				// Clamp the new resolution
-				newRes = std::clamp(newRes, minRes, maxRes);
-			}
-			else if (resetOnThreshold && lastRes != initialRes && averageCpuTime < minCpuTimeThreshold && !vramOnlyMode)
-			{
-				// Reset to initialRes because CPU time fell below the threshold
-				newRes = initialRes;
-			}
-
-			if (newRes != lastRes)
-			{
-				// Sets the new resolution
-				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes);
 			}
 		}
 

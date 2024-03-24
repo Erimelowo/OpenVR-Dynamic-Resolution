@@ -68,6 +68,8 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `ignoreCpuTime`: (0 = disabled, 1 = enabled) Don't use the CPU frametime to adjust resolution.
 
+- `disabledApps`: Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.
+
 ## Building from source
 
 We assume that you already have Git and CMake installed.

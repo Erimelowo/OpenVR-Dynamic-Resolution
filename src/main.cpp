@@ -1,5 +1,7 @@
 #include <openvr.h>
 #include <chrono>
+#include <set>
+#include <sstream>
 #include <thread>
 #include <fmt/core.h>
 #include <args.hxx>
@@ -43,6 +45,7 @@ int vramMonitorEnabled = 1;
 int vramOnlyMode = 0;
 int preferReprojection = 0;
 int ignoreCpuTime = 0;
+std::set<std::string> disabledApps;
 
 // NVML stuff
 typedef enum nvmlReturn_enum
@@ -99,6 +102,18 @@ float getVramUsage(nvmlLib nvmlLibrary)
 	return (float)memoryInfo.used / (float)memoryInfo.total;
 }
 
+std::set<std::string> splitConfigValue(const std::string& val) {
+	std::set<std::string> set;
+	std::stringstream ss(val);
+	std::string word;
+
+	while (ss >> word) {
+		set.insert(word);
+	}
+
+	return set;
+}
+
 bool loadSettings()
 {
 	// Get ini file
@@ -132,6 +147,7 @@ bool loadSettings()
 	vramOnlyMode = std::stoi(ini.GetValue("Resolution change", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
 	preferReprojection = std::stoi(ini.GetValue("Resolution change", "preferReprojection", std::to_string(preferReprojection).c_str()));
 	ignoreCpuTime = std::stoi(ini.GetValue("Resolution change", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
+	disabledApps = splitConfigValue(ini.GetValue("Resolution change", "disabledApps", ""));
 
 	return true;
 }
@@ -141,6 +157,22 @@ long getCurrentTimeMillis()
 	auto since_epoch = std::chrono::system_clock::now().time_since_epoch();
 	auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(since_epoch);
 	return millis.count();
+}
+
+std::string getCurrentApplicationKey() {
+	char applicationKey[vr::k_unMaxApplicationKeyLength];
+
+	uint32_t processId = vr::VRApplications()->GetCurrentSceneProcessId();
+	if (processId == 0) {
+		return "";
+	}
+
+	EVRApplicationError err = vr::VRApplications()->GetApplicationKeyByProcessId(processId, applicationKey,vr::k_unMaxApplicationKeyLength);
+	if (err != VRApplicationError_None) {
+		return "";
+	}
+
+	return {applicationKey};
 }
 
 int main(int argc, char *argv[])
@@ -327,12 +359,17 @@ int main(int argc, char *argv[])
 		// Get VRAM usage
 		float vramUsage = getVramUsage(nvmlLibrary);
 
+		// Check that we're in a supported application
+		bool inDashboard = vr::VROverlay()->IsDashboardVisible();
+		bool isCurrentAppDisabled = disabledApps.find(getCurrentApplicationKey()) != disabledApps.end();
+		bool adjustResolution = !inDashboard && !isCurrentAppDisabled;
+
 		// Resolution handling
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
 
-			if (!VROverlay()->IsDashboardVisible())
+			if (adjustResolution)
 			{
 
 				// Adjust resolution
@@ -457,6 +494,12 @@ int main(int argc, char *argv[])
 		attron(A_BOLD);
 		mvprintw(17, 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(newRes * 100))).c_str());
 		attroff(A_BOLD);
+
+		// Resolution adjustment status
+		if (!adjustResolution)
+		{
+			mvprintw(18, 0, "Resolution adjustment paused");
+		}
 
 		// Displays the information
 		refresh();

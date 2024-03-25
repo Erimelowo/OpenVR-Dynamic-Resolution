@@ -289,6 +289,7 @@ int main(int argc, char *argv[])
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();
+	bool adjustResolution = true;
 	std::list<float> gpuTimes;
 	std::list<float> cpuTimes;
 
@@ -359,15 +360,15 @@ int main(int argc, char *argv[])
 		// Get VRAM usage
 		float vramUsage = getVramUsage(nvmlLibrary);
 
-		// Check that we're in a supported application
-		bool inDashboard = vr::VROverlay()->IsDashboardVisible();
-		bool isCurrentAppDisabled = disabledApps.find(getCurrentApplicationKey()) != disabledApps.end();
-		bool adjustResolution = !inDashboard && !isCurrentAppDisabled;
-
 		// Resolution handling
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
+
+			// Check that we're in a supported application
+			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
+			bool isCurrentAppDisabled = disabledApps.find(getCurrentApplicationKey()) != disabledApps.end();
+			adjustResolution = !inDashboard && !isCurrentAppDisabled;
 
 			if (adjustResolution)
 			{

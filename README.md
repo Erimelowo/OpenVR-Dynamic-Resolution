@@ -8,7 +8,9 @@ This allows you to always have the maximum resolution your GPU can handle while 
 
 This is **not** the same as SteamVR's Auto Resolution, which seems to be using some benchmarking approach that does not work for the same as OVRDR.
 
-**Check out [WorkingGames.md](WorkingGames.md) for the list of working and non-working games.**
+Pro tip: if you want a higher resolution (for supersampling), you can lower your HMD's framerate to increase the target frametime.
+
+**Check out [WorkingGames.md](WorkingGames.md) for a list of working and non-working games.**
 
 ## Installation/Using It
 

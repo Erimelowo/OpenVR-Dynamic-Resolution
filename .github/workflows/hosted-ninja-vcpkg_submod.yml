@@ -1,0 +1,105 @@
+# Copyright (c) 2021-2022-2023-2024 Luca Cappa
+# Released under the term specified in file LICENSE.txt
+# SPDX short identifier: MIT
+#
+# The peculiarity of this workflow is that assumes vcpkg stored as a submodule of this repository.
+# The workflow runs on x64 and ARM platforms.
+# Workflow steps:
+# - Setup vcpkg and cache it on the GitHub Action cloud based cache.
+# - Runs CMake with CMakePreset.json using a presest configuration
+#   that leverages the vcpkg's toolchain file. This will automatically run vcpkg 
+#   to install dependencies described by the vcpkg.json manifest file. 
+#   This stage also runs vcpkg with Binary Caching leveraging GitHub Action cache to 
+#   store the built packages artifacts, hence it will be a no-op if those are restored 
+#   from cache (e.g., already previously built).
+# - Finally builds the sources with Ninja, and tests as well.
+name: hosted-ninja-vcpkg_submod-autocache
+on:
+  push: 
+    pull_request:
+    branches: 
+    - main
+  workflow_dispatch:
+  schedule:
+  - cron: '0 1 * * *'
+
+jobs:
+  job:
+    name: ${{ matrix.os }}-${{ github.workflow }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact: Linux.tar.xz
+          - os: windows-latest
+            artifact: Windows.tar.xz
+    env:
+      VCPKG_DISABLE_METRICS: 1
+
+    # [OPTIONAL] Define the vcpkg's triplet 
+    # you want to enforce, otherwise the default one 
+    # for the hosting system will be automatically
+    # choosen (x64 is the default on all platforms, 
+    # e.g. x64-osx).
+    # VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }} 
+
+    steps:
+      - name: Install prerequisites
+        if: ${{ matrix.os=='ubuntu-latest' }}
+        run: |
+          sudo apt-get install libegl1-mesa-dev
+          sudo -H python3 -m pip install Jinja2
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: lukka/get-cmake@latest
+
+      - name: Restore from cache and setup vcpkg executable and data files.
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: 'vcpkg.json'
+
+      # Note: if the preset misses the "configuration", it is possible to explicitly select the
+      # configuration with the additional `--config` flag, e.g.:
+      #   buildPreset: 'ninja-vcpkg'
+      #   buildPresetAdditionalArgs: "[`--config`, `Release`]"
+      #   testPreset: 'ninja-vcpkg'
+      #   testPresetAdditionalArgs: "[`--config`, `Release`]"
+      - name: Run CMake+vcpkg+Ninja+CTest to build packages and generate/build/test the code.
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: 'ninja-multi-vcpkg'
+          buildPreset: 'ninja-vcpkg-release'
+          testPreset: 'test-release'
+          packagePreset: 'package-release-${{ matrix.os }}'
+
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: package/_CPack_Packages
+
+      - name: Pack
+        working-directory: package
+        run: cmake -E tar cJfv ../${{ matrix.artifact }} .
+
+      - name: Upload
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: ./${{ matrix.artifact }}
+
+      - name: Find shared libs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const patterns = ['builds/**/*.so', 'builds/**/*.dll', 'builds/**/*.DLL']
+            const globber = await glob.create(patterns.join('\n'))
+            for await (const file of globber.globGenerator()) {
+              console.log(file)
+            }
+

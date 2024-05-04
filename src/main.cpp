@@ -294,7 +294,6 @@ int main(int argc, char *argv[])
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();
-	bool isCurrentAppDisabled = false;
 	bool adjustResolution = true;
 	std::list<float> gpuTimes;
 	std::list<float> cpuTimes;
@@ -375,7 +374,7 @@ int main(int argc, char *argv[])
 			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
 			// Check that we're in a supported application
 			std::string appKey = getCurrentApplicationKey();
-			isCurrentAppDisabled = disabledApps.find(appKey) != disabledApps.end() || appKey == "";
+			bool isCurrentAppDisabled = disabledApps.find(appKey) != disabledApps.end() || appKey == "";
 			// Only adjust resolution if not in dashboard and in a supported application
 			adjustResolution = !inDashboard && !isCurrentAppDisabled;
 
@@ -510,7 +509,7 @@ int main(int argc, char *argv[])
 		attroff(A_BOLD);
 
 		// Resolution adjustment status
-		if (!adjustResolution || isCurrentAppDisabled)
+		if (!adjustResolution)
 		{
 			mvprintw(18, 0, "Resolution adjustment paused");
 		}

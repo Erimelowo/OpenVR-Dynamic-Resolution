@@ -2,10 +2,6 @@ Settings Descriptions
 
 Settings are found in the settings.ini file. Do not rename that file. It should be located in the same folder as your executable file (`OpenVR-Dynamic-Resolution.exe`).
 
-If you are using a Quest 2/Pro/3, it is recommended you use the settingsLow.ini
-If you are using a Valve Index/Vive, it is recommended you use the settingsHigh.ini
-(To do that, just delete settings.ini and rename the chosen file to settings.ini)
-
 - autoStart: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.
 
 - minimizeOnStart: (0 = show, 1 = minimize, 2 = hide) Will automatically minimize or hide the window on launch. 
@@ -62,3 +58,6 @@ as the CPU frametime is over the target frametime; else, the CPU frametime needs
 the target frametime for the GPU target frametime to double.
 
 - ignoreCpuTime: (0 = disabled, 1 = enabled) Don't use the CPU frametime to adjust resolution.
+
+- disabledApps: Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. 
+Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.

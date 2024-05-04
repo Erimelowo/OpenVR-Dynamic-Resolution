@@ -102,12 +102,14 @@ float getVramUsage(nvmlLib nvmlLibrary)
 	return (float)memoryInfo.used / (float)memoryInfo.total;
 }
 
-std::set<std::string> splitConfigValue(const std::string& val) {
+std::set<std::string> splitConfigValue(const std::string &val)
+{
 	std::set<std::string> set;
 	std::stringstream ss(val);
 	std::string word;
 
-	while (ss >> word) {
+	while (ss >> word)
+	{
 		set.insert(word);
 	}
 
@@ -159,16 +161,19 @@ long getCurrentTimeMillis()
 	return millis.count();
 }
 
-std::string getCurrentApplicationKey() {
+std::string getCurrentApplicationKey()
+{
 	char applicationKey[vr::k_unMaxApplicationKeyLength];
 
 	uint32_t processId = vr::VRApplications()->GetCurrentSceneProcessId();
-	if (processId == 0) {
+	if (processId == 0)
+	{
 		return "";
 	}
 
-	EVRApplicationError err = vr::VRApplications()->GetApplicationKeyByProcessId(processId, applicationKey,vr::k_unMaxApplicationKeyLength);
-	if (err != VRApplicationError_None) {
+	EVRApplicationError err = vr::VRApplications()->GetApplicationKeyByProcessId(processId, applicationKey, vr::k_unMaxApplicationKeyLength);
+	if (err != VRApplicationError_None)
+	{
 		return "";
 	}
 
@@ -411,7 +416,9 @@ int main(int argc, char *argv[])
 					// Reset to initialRes because CPU time fell below the threshold
 					newRes = initialRes;
 				}
-			} else if (isCurrentAppDisabled) {
+			}
+			else if (isCurrentAppDisabled)
+			{
 				// We've switched into an unsupported application, let's reset
 				newRes = initialRes;
 			}

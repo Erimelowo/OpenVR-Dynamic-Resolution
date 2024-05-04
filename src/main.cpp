@@ -372,7 +372,6 @@ int main(int argc, char *argv[])
 
 			if (adjustResolution)
 			{
-
 				// Adjust resolution
 				if ((averageCpuTime > minCpuTimeThreshold || vramOnlyMode))
 				{
@@ -412,12 +411,15 @@ int main(int argc, char *argv[])
 					// Reset to initialRes because CPU time fell below the threshold
 					newRes = initialRes;
 				}
+			} else if (isCurrentAppDisabled) {
+				// We've switched into an unsupported application, let's reset
+				newRes = initialRes;
+			}
 
-				if (newRes != lastRes)
-				{
-					// Sets the new resolution
-					vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes);
-				}
+			if (newRes != lastRes)
+			{
+				// Sets the new resolution
+				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes);
 			}
 		}
 

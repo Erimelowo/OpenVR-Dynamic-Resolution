@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.28)
 
 project(OpenVR-Dynamic-Resolution)
 
@@ -6,16 +6,11 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+## Find dependencies
 find_package(fmt CONFIG REQUIRED)
-if(WIN32)
-  find_path(PDC_INCLUDES curses.h)
-  include_directories(${PDC_INCLUDES})
-  find_library(CURSES_LIBRARIES pdcurses REQUIRED)
-else()
-  find_package(Curses REQUIRED)
-  include_directories(${CURSES_INCLUDE_DIRS})
-endif()
 find_library(OPENVR_LIB openvr_api)
+find_package(glfw3 REQUIRED)
+find_package(imgui REQUIRED)
 
 set(protos_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/protos)
 file(MAKE_DIRECTORY "${protos_OUTPUT_DIR}")
@@ -27,8 +22,17 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH $ORIGIN)
 
 # Project
-add_executable("${PROJECT_NAME}" "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
-target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only ${CURSES_LIBRARIES})
+# Set some Win32 Specific Settings
+IF(WIN32)
+SET(GUI_TYPE WIN32)
+ENDIF(WIN32)
+# Set some Apple MacOS Specific settings
+IF (APPLE)
+SET(GUI_TYPE MACOSX_BUNDLE)
+ENDIF (APPLE)
+
+add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
+target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only glfw imgui::imgui)
 target_include_directories("${PROJECT_NAME}" PUBLIC ${protos_OUTPUT_DIR} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 

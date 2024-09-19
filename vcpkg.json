@@ -1,12 +1,15 @@
 {
     "name": "openvr-dynamic-resolution",
-    "version-string": "0.1.0",
+    "version-string": "v1.0.0",
     "dependencies": [
         "fmt",
         "openvr",
         "args",
         "simpleini",
-        { "name": "ncurses", "platform": "!windows | mingw" },
-        { "name": "pdcurses", "platform": "windows & !uwp & !mingw" }
+        "glfw3",
+        {
+            "name": "imgui",
+            "features": ["glfw-binding", "opengl3-binding" ]
+        }
     ]
 }

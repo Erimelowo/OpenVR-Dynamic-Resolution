@@ -5,7 +5,6 @@
 #include <thread>
 #include <fmt/core.h>
 #include <args.hxx>
-#include <curses.h>
 #include <stdlib.h>
 #ifdef _WIN32
 #include <Windows.h>
@@ -16,10 +15,19 @@
 #include "SimpleIni.h"
 #include "setup.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#define GL_SILENCE_DEPRECATION
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <GLES2/gl2.h>
+#endif
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v.0.4.1";
+static constexpr const char *version = "v1.0.0-rc.1";
 
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -188,28 +196,67 @@ int main(int argc, char *argv[])
 	void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 #endif
 
-	int rows, cols;		 // max rows and cols
-	initscr();			 // Initialize screen
-	cbreak();			 // Disable line-buffering (for input)
-	noecho();			 // Don't show what the user types
-	resize_term(20, 64); // Sets the initial (y, x) resolution
+	if (!glfwInit())
+		return 1;
 
-	// Check for errors
+		// Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+	// GL ES 2.0 + GLSL 100
+	const char *glsl_version = "#version 100";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+	// GL 3.2 + GLSL 150
+	const char *glsl_version = "#version 150";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);		   // Required on Mac
+#else
+	// GL 3.0 + GLSL 130
+	const char *glsl_version = "#version 130";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	// glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+
+	// Create window with graphics context
+	GLFWwindow *window = glfwCreateWindow(480, 400, fmt::format("OpenVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
+	if (window == nullptr)
+		return 1;
+	glfwMakeContextCurrent(window);
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+	ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
+#endif
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	// Check for VR init errors
 	EVRInitError init_error = VRInitError_None;
 	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
 		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
 	if (init_error != VRInitError_None)
 	{
 		system = nullptr;
-		printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
-		refresh();
+		//printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
+		//refresh();
 		std::this_thread::sleep_for(4000ms);
 		return EXIT_FAILURE;
 	}
 	if (!VRCompositor())
 	{
-		printw("Failed to initialize VR compositor.");
-		refresh();
+		//printw("Failed to initialize VR compositor.");
 		std::this_thread::sleep_for(4000ms);
 		return EXIT_FAILURE;
 	}
@@ -217,32 +264,29 @@ int main(int argc, char *argv[])
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
 
-#if defined(_WIN32)
-	// Minimize the window if user wants to
-	if (minimizeOnStart == 1)
-		ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
-	else if (minimizeOnStart == 2)
-		ShowWindow(GetConsoleWindow(), SW_HIDE);
-#endif
+	// Minimize or hide the window if user wants to
+	if (minimizeOnStart == 1) // Minimize
+	{	
+		// TODO
+	}
+	else if (minimizeOnStart == 2) // Hide
+	{	
+		// TODO
+	}
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
 
 	if (autoStartResult == 1)
 	{
-		refresh();
 		std::this_thread::sleep_for(1000ms);
-		printw("Done!");
-		refresh();
+		//printw("Done!");
 		std::this_thread::sleep_for(600ms);
 	}
 	else if (autoStartResult == 2)
 	{
-		refresh();
 		std::this_thread::sleep_for(4000ms);
 	}
-	clear();
-	refresh();
 
 	// Set default resolution
 	vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
@@ -299,7 +343,7 @@ int main(int argc, char *argv[])
 	std::list<float> cpuTimes;
 
 	// event loop
-	while (true)
+	while (!glfwWindowShouldClose(window))
 	{
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
@@ -433,89 +477,111 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// Clear console
-		clear();
-		getmaxyx(stdscr, rows, cols);
-
-		// Title
-		attron(A_UNDERLINE);
-		mvprintw(0, 0, "%s", fmt::format("OpenVR Dynamic Resolution {}", version).c_str());
-		attroff(A_UNDERLINE);
-
-		// Settings status
-		if (settingsLoaded)
-			mvprintw(1, 0, "%s", fmt::format("settings.ini successfully loaded").c_str());
-		else
-			mvprintw(1, 0, "%s", fmt::format("Error loading settings.ini").c_str());
-
-		// HMD Hz
-		mvprintw(3, 0, "%s", fmt::format("HMD Hz: {} fps", std::to_string(int(targetFps))).c_str());
-
-		// Target frametime
-		if (!vramOnlyMode)
+		glfwPollEvents();
+		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
 		{
-			mvprintw(4, 0, "%s", fmt::format("HMD Hz target frametime: {} ms", std::to_string(realTargetFrametime).substr(0, 4)).c_str());
-			mvprintw(5, 0, "%s", fmt::format("Adjusted target frametime: {} ms", std::to_string(targetFrametime).substr(0, 4)).c_str());
-		}
-		else
-		{
-			mvprintw(4, 0, "%s", "Adjusted target frametime: Disabled");
-			mvprintw(5, 0, "%s", "HMD Hz target frametime: Disabled");
+			continue;
 		}
 
-		// VRAM target and limit
-		if (vramMonitorEnabled)
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 		{
-			mvprintw(6, 0, "%s", fmt::format("VRAM target: {}%", std::to_string(vramTarget * 100).substr(0, 4)).c_str());
-			mvprintw(7, 0, "%s", fmt::format("VRAM limit: {}%", std::to_string(vramLimit * 100).substr(0, 4)).c_str());
+			ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+			ImGui::SetWindowCollapsed(false);
+			ImGui::SetWindowPos(ImVec2(0, 0));
+			ImGui::SetWindowSize(ImVec2(480, 400));
+
+			// Settings status
+			if (settingsLoaded)
+				ImGui::Text(fmt::format("settings.ini successfully loaded").c_str());
+			else
+				ImGui::Text(fmt::format("Error loading settings.ini (default values used)").c_str());
+
+			ImGui::NewLine();
+
+			// HMD Hz
+			ImGui::Text(fmt::format("HMD Hz: {} fps", std::to_string(int(targetFps))).c_str());
+
+			// Target frametime
+			if (!vramOnlyMode)
+			{
+				ImGui::Text(fmt::format("HMD Hz target frametime: {} ms", std::to_string(realTargetFrametime).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("Adjusted target frametime: {} ms", std::to_string(targetFrametime).substr(0, 4)).c_str());
+			}
+			else
+			{
+				ImGui::Text("Adjusted target frametime: Disabled");
+				ImGui::Text("HMD Hz target frametime: Disabled");
+			}
+
+			// VRAM target and limit
+			if (vramMonitorEnabled)
+			{
+				ImGui::Text(fmt::format("VRAM target: {}%", std::to_string(vramTarget * 100).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("VRAM limit: {}%", std::to_string(vramLimit * 100).substr(0, 4)).c_str());
+			}
+			else
+			{
+				ImGui::Text(fmt::format("VRAM target: Disabled").c_str());
+				ImGui::Text(fmt::format("VRAM limit: Disabled").c_str());
+			}
+
+			ImGui::NewLine();
+
+			// FPS and frametimes
+			ImGui::Text(fmt::format("FPS: {} fps", std::to_string(currentFps)).c_str());
+			ImGui::Text(fmt::format("GPU frametime: {} ms", std::to_string(averageGpuTime).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("CPU frametime: {} ms", std::to_string(averageCpuTime).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("Raw CPU frametime: {} ms", std::to_string(realCpuTime).substr(0, 4)).c_str());
+
+			// VRAM usage
+			if (vramMonitorEnabled)
+				ImGui::Text(fmt::format("VRAM usage: {}%", std::to_string(vramUsage * 100).substr(0, 4)).c_str());
+			else
+				ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
+
+			ImGui::NewLine();
+
+			// Reprojecting status
+			if (frameShown > 1)
+			{
+				std::string reason = fmt::format("Other [{}]", reprojectionFlag).c_str();
+				if (reprojectionFlag == 20)
+					reason = "CPU";
+				else if (reprojectionFlag == 276)
+					reason = "GPU";
+
+				ImGui::Text(fmt::format("Reprojecting: Yes ({}x, {})", frameShown, reason).c_str());
+			}
+			else
+			{
+				ImGui::Text("Reprojecting: No");
+			}
+
+			ImGui::NewLine();
+
+			// Current resolution
+			ImGui::Text(fmt::format("Resolution = {}%", std::to_string(int(newRes * 100))).c_str());
+
+			// Resolution adjustment status
+			if (!adjustResolution)
+			{
+				ImGui::Text("Resolution adjustment paused");
+			}
+
+			ImGui::End();
 		}
-		else
-		{
-			mvprintw(6, 0, "%s", fmt::format("VRAM target: Disabled").c_str());
-			mvprintw(7, 0, "%s", fmt::format("VRAM limit: Disabled").c_str());
-		}
 
-		// FPS and frametimes
-		mvprintw(9, 0, "%s", fmt::format("FPS: {} fps", std::to_string(currentFps)).c_str());
-		mvprintw(10, 0, "%s", fmt::format("GPU frametime: {} ms", std::to_string(averageGpuTime).substr(0, 4)).c_str());
-		mvprintw(11, 0, "%s", fmt::format("CPU frametime: {} ms", std::to_string(averageCpuTime).substr(0, 4)).c_str());
-		mvprintw(12, 0, "%s", fmt::format("Raw CPU frametime: {} ms", std::to_string(realCpuTime).substr(0, 4)).c_str());
+		// Rendering
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		// VRAM usage
-		if (vramMonitorEnabled)
-			mvprintw(13, 0, "%s", fmt::format("VRAM usage: {}%", std::to_string(vramUsage * 100).substr(0, 4)).c_str());
-		else
-			mvprintw(13, 0, "%s", fmt::format("VRAM usage: Disabled").c_str());
-
-		// Reprojecting status
-		if (frameShown > 1)
-		{
-			std::string reason = fmt::format("Other [{}]", reprojectionFlag).c_str();
-			if (reprojectionFlag == 20)
-				reason = "CPU";
-			else if (reprojectionFlag == 276)
-				reason = "GPU";
-
-			mvprintw(15, 0, fmt::format("Reprojecting: Yes ({}x, {})", frameShown, reason).c_str());
-		}
-		else
-		{
-			mvprintw(15, 0, "Reprojecting: No");
-		}
-
-		// Current resolution
-		attron(A_BOLD);
-		mvprintw(17, 0, "%s", fmt::format("Resolution = {}%", std::to_string(int(newRes * 100))).c_str());
-		attroff(A_BOLD);
-
-		// Resolution adjustment status
-		if (!adjustResolution)
-		{
-			mvprintw(18, 0, "Resolution adjustment paused");
-		}
-
-		// Displays the information
-		refresh();
+		glfwSwapBuffers(window);
 
 		// Calculate how long to sleep for
 		long sleepTime = dataPullDelayMs;
@@ -532,7 +598,7 @@ int main(int argc, char *argv[])
 		std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
 	}
 
-	// TODO actually be able to get out of the while loop
+	// TODO actually be able to get out of the while loop !!!
 
 #ifdef _WIN32
 	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
@@ -550,5 +616,20 @@ int main(int argc, char *argv[])
 	dlclose(nvmlLibrary);
 #endif
 
+	// Cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
 	return 0;
 }
+
+#ifdef _WIN32
+int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow)
+{
+	main(NULL, NULL);
+}
+#endif

@@ -1,7 +1,6 @@
 #include <openvr.h>
 #include <fmt/core.h>
 #include <memory>
-#include <curses.h>
 
 #include "pathtools_excerpt.h"
 
@@ -31,7 +30,7 @@ int handle_setup(bool install)
 	std::string manifest_path = Path_MakeAbsolute(rel_manifest_path, Path_StripFilename(Path_GetExecutablePath()));
 	if (install)
 	{
-		printw("Enabling auto-start...\n");
+		//printw("Enabling auto-start...\n");
 
 		if (currently_installed)
 		{
@@ -46,14 +45,14 @@ int handle_setup(bool install)
 		app_error = apps->AddApplicationManifest(manifest_path.c_str());
 		if (app_error != vr::VRApplicationError_None)
 		{
-			printw("%s", fmt::format("Could not enable auto-start: {}\n", apps->GetApplicationsErrorNameFromEnum(app_error)).c_str());
+			//printw("%s", fmt::format("Could not enable auto-start: {}\n", apps->GetApplicationsErrorNameFromEnum(app_error)).c_str());
 			return 2;
 		}
 
 		app_error = apps->SetApplicationAutoLaunch(application_key, true);
 		if (app_error != vr::VRApplicationError_None)
 		{
-			printw("%s", fmt::format("Could not set auto-start: {}\n", apps->GetApplicationsErrorNameFromEnum(app_error)).c_str());
+			//printw("%s", fmt::format("Could not set auto-start: {}\n", apps->GetApplicationsErrorNameFromEnum(app_error)).c_str());
 			return 2;
 		}
 		return 1;
@@ -65,7 +64,7 @@ int handle_setup(bool install)
 			return 0;
 		}
 
-		printw("Disabling auto-start...\n");
+		//printw("Disabling auto-start...\n");
 		apps->SetApplicationAutoLaunch(application_key, false);
 		return 1;
 	}

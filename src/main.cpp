@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 #endif
 
 	// Create window with graphics context
-	GLFWwindow *window = glfwCreateWindow(480, 400, fmt::format("OpenVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(480, 400, fmt::format("OVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
 	if (window == nullptr)
 		return 1;
 	glfwMakeContextCurrent(window);
@@ -275,6 +275,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Set auto-start
+	// TODO: test
 	int autoStartResult = handle_setup(autoStart);
 
 	if (autoStartResult == 1)

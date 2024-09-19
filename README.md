@@ -18,7 +18,7 @@ Pro tip: if you want a higher resolution (for supersampling), you can lower your
 
 - Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OpenVR-Dynamic-Resolution.zip)
 - Extract the .zip
-- Launch `OpenVR-Dynamic-Resolution.exe`
+- Launch `OVR-Dynamic-Resolution.exe`
 
 ## Settings Descriptions
 

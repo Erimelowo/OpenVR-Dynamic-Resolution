@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(OpenVR-Dynamic-Resolution)
+project(OVR-Dynamic-Resolution)
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 

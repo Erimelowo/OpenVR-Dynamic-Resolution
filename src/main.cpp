@@ -29,8 +29,8 @@ using namespace vr;
 
 static constexpr const char *version = "v1.0.0-rc.1";
 
-#pragma region config
-#pragma region default settings
+#pragma region Config
+#pragma region Default settings
 // Initialization
 int autoStart = 1;
 int minimizeOnStart = 0;
@@ -85,35 +85,35 @@ bool loadSettings()
 	// Get setting values
 	autoStart = std::stoi(ini.GetValue("Initialization", "autoStart", std::to_string(autoStart).c_str()));
 	minimizeOnStart = std::stoi(ini.GetValue("Initialization", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
-	initialRes = std::stof(ini.GetValue("Initialization", "initialRes", std::to_string(initialRes * 100.0f).c_str())) / 100.0f;
 
-	minRes = std::stof(ini.GetValue("Resolution change", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
-	maxRes = std::stof(ini.GetValue("Resolution change", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
-	dataPullDelayMs = std::stol(ini.GetValue("Resolution change", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str()));
-	resChangeDelayMs = std::stol(ini.GetValue("Resolution change", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
-	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution change", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
-	resIncreaseMin = std::stof(ini.GetValue("Resolution change", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str())) / 100.0f;
-	resDecreaseMin = std::stof(ini.GetValue("Resolution change", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str())) / 100.0f;
-	resIncreaseScale = std::stof(ini.GetValue("Resolution change", "resIncreaseScale", std::to_string(resIncreaseScale * 100.0f).c_str())) / 100.0f;
-	resDecreaseScale = std::stof(ini.GetValue("Resolution change", "resDecreaseScale", std::to_string(resDecreaseScale * 100.0f).c_str())) / 100.0f;
-	resIncreaseThreshold = std::stof(ini.GetValue("Resolution change", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str())) / 100.0f;
-	resDecreaseThreshold = std::stof(ini.GetValue("Resolution change", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str())) / 100.0f;
-	dataAverageSamples = std::stoi(ini.GetValue("Resolution change", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
-	resetOnThreshold = std::stoi(ini.GetValue("Resolution change", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
-	alwaysReproject = std::stoi(ini.GetValue("Resolution change", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
-	vramLimit = std::stoi(ini.GetValue("Resolution change", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
-	vramTarget = std::stoi(ini.GetValue("Resolution change", "vramTarget", std::to_string(vramTarget * 100.0f).c_str())) / 100.0f;
-	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution change", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
-	vramOnlyMode = std::stoi(ini.GetValue("Resolution change", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
-	preferReprojection = std::stoi(ini.GetValue("Resolution change", "preferReprojection", std::to_string(preferReprojection).c_str()));
-	ignoreCpuTime = std::stoi(ini.GetValue("Resolution change", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
-	disabledApps = splitConfigValue(ini.GetValue("Resolution change", "disabledApps", ""));
+	initialRes = std::stof(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes * 100.0f).c_str())) / 100.0f;
+	minRes = std::stof(ini.GetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
+	maxRes = std::stof(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
+	dataPullDelayMs = std::stol(ini.GetValue("Resolution", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str()));
+	resChangeDelayMs = std::stol(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
+	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
+	resIncreaseMin = std::stof(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str())) / 100.0f;
+	resDecreaseMin = std::stof(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str())) / 100.0f;
+	resIncreaseScale = std::stof(ini.GetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale * 100.0f).c_str())) / 100.0f;
+	resDecreaseScale = std::stof(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale * 100.0f).c_str())) / 100.0f;
+	resIncreaseThreshold = std::stof(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str())) / 100.0f;
+	resDecreaseThreshold = std::stof(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str())) / 100.0f;
+	dataAverageSamples = std::stoi(ini.GetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+	resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
+	alwaysReproject = std::stoi(ini.GetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
+	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
+	vramTarget = std::stoi(ini.GetValue("Resolution", "vramTarget", std::to_string(vramTarget * 100.0f).c_str())) / 100.0f;
+	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
+	vramOnlyMode = std::stoi(ini.GetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
+	preferReprojection = std::stoi(ini.GetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str()));
+	ignoreCpuTime = std::stoi(ini.GetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
+	disabledApps = splitConfigValue(ini.GetValue("Resolution", "disabledApps", ""));
 
 	return true;
 }
 #pragma endregion
 
-#pragma region NVML stuff
+#pragma region NVML methods
 typedef enum nvmlReturn_enum
 {
 	NVML_SUCCESS = 0,					// The operation was successful.
@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
 	std::list<float> cpuTimes;
 
 	// event loop
-	while (!glfwWindowShouldClose(window))
+	while (!glfwWindowShouldClose(window) || false) // TODO OpenVR exit
 	{
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
@@ -599,8 +599,8 @@ int main(int argc, char *argv[])
 		std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
 	}
 
-	// TODO actually be able to get out of the while loop !!!
-
+#pragma region Cleanup
+	// NVML cleanup
 #ifdef _WIN32
 	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
 	if (nvmlShutdownPtr)
@@ -617,13 +617,13 @@ int main(int argc, char *argv[])
 	dlclose(nvmlLibrary);
 #endif
 
-	// Cleanup
+	// GUI cleanup
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-
 	glfwDestroyWindow(window);
 	glfwTerminate();
+#pragma endregion
 
 	return 0;
 }

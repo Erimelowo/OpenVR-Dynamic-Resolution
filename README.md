@@ -92,6 +92,9 @@ You can then execute the newly built binary by running:
 
 ## Licensing
 
-BSD 3-Clause License
+[BSD 3-Clause License](/LICENSE)
 
-This work is based on [SlimeVR-Feeder-App](https://github.com/SlimeVR/SlimeVR-Feeder-App) which is licensed under the BSD 3-Clause License. We use the OpenVR library which is also available under the BSD 3-Clause License. Additionally, we use [simpleini](https://github.com/brofield/simpleini) which is available the MIT License and the fmt library which is available under a [Boost-like license](https://github.com/fmtlib/fmt/blob/master/LICENSE.rst).
+This work is based on [SlimeVR-Feeder-App](https://github.com/SlimeVR/SlimeVR-Feeder-App) which is licensed under the BSD 3-Clause License.  
+We use the [OpenVR](https://github.com/ValveSoftware/openvr) library which is also available under the BSD 3-Clause License.  
+Additionally, we use [simpleini](https://github.com/brofield/simpleini) which is available the MIT License.  
+We also use the [fmt](https://github.com/fmtlib/fmt) library which is available under a Boost-like license. 

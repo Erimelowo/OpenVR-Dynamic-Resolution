@@ -27,7 +27,7 @@ List of working and non-working games. Games not on this list have not been test
 - BONELAB
 - Contractors [UE4]
 - Google Chrome (WebXR)
-- Half-Life: Alyx
+- Half-Life: Alyx [has its own dynamic resolution]
 - Hellsplit Arena [UE4]
 - Pavlov VR [UE5]
 - Phantom: Covert Ops (through Revive) [UE4]

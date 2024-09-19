@@ -78,7 +78,7 @@ We assume that you already have Git and CMake installed.
 To build the project, run:
 
 ```
-git clone --recursive https://github.com/Louka3000/OpenVR-Dynamic-Resolution.git
+git clone --recursive https://github.com/Erimelowo/OpenVR-Dynamic-Resolution.git
 cd OpenVR-Dynamic-Resolution
 cmake -B build
 cmake --build build --config Release

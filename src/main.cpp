@@ -29,6 +29,8 @@ using namespace vr;
 
 static constexpr const char *version = "v1.0.0-rc.1";
 
+bool nvmlEnabled = true;
+
 #pragma region Config
 #pragma region Default settings
 // Initialization
@@ -197,13 +199,6 @@ std::string getCurrentApplicationKey()
 
 int main(int argc, char *argv[])
 {
-	// Load NVML
-#ifdef _WIN32
-	HMODULE nvmlLibrary = LoadLibraryA("nvml.dll");
-#else
-	void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
-#endif
-
 	if (!glfwInit())
 		return 1;
 
@@ -294,49 +289,61 @@ int main(int argc, char *argv[])
 	vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
 
-	// Initialise NVML
-	nvmlInit_t nvmlInitPtr;
+	HMODULE nvmlLibrary = NULL;
+#pragma region initialise NVML
+	if (vramMonitorEnabled) {
 #ifdef _WIN32
-	nvmlInitPtr = (nvmlInit_t)GetProcAddress(nvmlLibrary, "nvmlInit");
+		nvmlLibrary = LoadLibraryA("nvml.dll");
 #else
-	nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
+		void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 #endif
-	if (!nvmlInitPtr)
-		vramMonitorEnabled = 0;
-	if (vramMonitorEnabled)
-	{
-		nvmlReturn_t result;
-		// Initialize NVML library
-		result = nvmlInitPtr();
-		if (result != NVML_SUCCESS)
-			vramMonitorEnabled = 0;
 
-		// Get device handle
-		nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
+		nvmlInit_t nvmlInitPtr;
 #ifdef _WIN32
-		nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+		nvmlInitPtr = (nvmlInit_t)GetProcAddress(nvmlLibrary, "nvmlInit");
 #else
-		nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+		nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
 #endif
-		if (!nvmlDeviceGetHandleByIndexPtr)
-			vramMonitorEnabled = 0;
-		else
-			result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
-		if (result != NVML_SUCCESS || !vramMonitorEnabled)
+
+		if (!nvmlInitPtr)
+		nvmlEnabled = false;
+
+		if (nvmlEnabled)
 		{
-			nvmlShutdown_t nvmlShutdownPtr;
+			nvmlReturn_t result;
+			// Initialize NVML library
+			result = nvmlInitPtr();
+			if (result != NVML_SUCCESS)
+				nvmlEnabled = false;
+
+			// Get device handle
+			nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
 #ifdef _WIN32
-			nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+			nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
 #else
-			nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+			nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
 #endif
-			vramMonitorEnabled = 0;
-			if (nvmlShutdownPtr)
+			if (!nvmlDeviceGetHandleByIndexPtr)
+				nvmlEnabled = false;
+			else
+				result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
+			if (result != NVML_SUCCESS || !nvmlEnabled)
 			{
-				nvmlShutdownPtr();
+				nvmlShutdown_t nvmlShutdownPtr;
+#ifdef _WIN32
+				nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+#else
+				nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+#endif
+
+				if (nvmlShutdownPtr)
+				{
+					nvmlShutdownPtr();
+				}
 			}
 		}
 	}
+#pragma endregion
 
 	// Initialize loop variables
 	long lastChangeTime = getCurrentTimeMillis();

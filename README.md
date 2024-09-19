@@ -2,27 +2,24 @@
 
 [![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
 
-OpenVR app that dynamically adjusts the HMD's resolution to the GPU frametime, CPU frametime and VRAM.
+Lightweight OpenVR app to dynamically adjust your HMD's resolution depending on your GPU frametime, CPU frametime and VRAM.
 
-This allows you to always have the maximum resolution your GPU can handle while hitting your target FPS (without reprojecting). Useful for games in which GPU requirement varies a lot (e.g. VRChat).
+This allows you to always play at the maximum resolution your GPU can handle while hitting your target FPS (without reprojecting). This is especially useful for games in which performance varies a lot (e.g. VRChat).
 
-This is **not** the same as SteamVR's Auto Resolution, which seems to be using some benchmarking approach that does not work for the same as OVRDR.
-
-Pro tip: if you want a higher resolution (for supersampling), you can lower your HMD's framerate to increase the target frametime.
+This is **not** the same as SteamVR's Auto Resolution, which instead seems to be using a kind of benchmarking approach.
 
 **Check out [WorkingGames.md](WorkingGames.md) for a list of working and non-working games.**
 
 ## Installation/Using It
 
-**_Make sure SteamVR's Render Resolution is set to Custom_**
-
-- Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OpenVR-Dynamic-Resolution.zip)
+- Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OVR-Dynamic-Resolution.zip)
 - Extract the .zip
 - Launch `OVR-Dynamic-Resolution.exe`
 
 ## Settings Descriptions
 
-Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as your executable file (`OpenVR-Dynamic-Resolution.exe`).
+Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as the executable file (`OpenVR-Dynamic-Resolution.exe`).  
+*Pro tip: if you want a higher resolution (for supersampling), you can lower your HMD's framerate or set `alwaysReproject` to 1 to increase the target frametime.*
 
 - `autoStart`: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.
 

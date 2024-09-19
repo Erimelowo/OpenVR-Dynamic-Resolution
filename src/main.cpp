@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 	nvmlInitPtr = (nvmlInit_t)GetProcAddress(nvmlLibrary, "nvmlInit");
 #else
-	nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlShutdown");
+	nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
 #endif
 	if (!nvmlInitPtr)
 		vramMonitorEnabled = 0;

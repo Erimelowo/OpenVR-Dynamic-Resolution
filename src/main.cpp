@@ -29,6 +29,12 @@ using namespace vr;
 
 static constexpr const char *version = "v1.0.0-rc.1";
 
+static std::chrono::milliseconds refreshIntervalBackground = 167ms; // 6fps
+static std::chrono::milliseconds refreshIntervalFocused = 33ms; // 30fps
+
+static int mainWindowWidth = 420;
+static int mainWindowHeight = 360;
+
 bool nvmlEnabled = true;
 
 #pragma region Config
@@ -197,8 +203,44 @@ std::string getCurrentApplicationKey()
 	return {applicationKey};
 }
 
+void printLine(GLFWwindow *window, std::string text, long duration) {
+	long startTime = getCurrentTimeMillis();
+
+	while (getCurrentTimeMillis() < startTime + duration && !glfwWindowShouldClose(window)) {
+		glfwPollEvents();
+
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		// Create the main window
+		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+		// Set position and size to fill the main window
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
+
+		// Display the line
+		ImGui::TextWrapped(text.c_str());
+
+		// Stop creating the main window
+		ImGui::End();
+
+		// Rendering
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		glfwSwapBuffers(window);
+
+		// Sleep to display the text for a set duration
+		std::this_thread::sleep_for(refreshIntervalBackground);
+	}
+}
+
 int main(int argc, char *argv[])
 {
+#pragma region  GUI init
 	if (!glfwInit())
 		return 1;
 
@@ -211,8 +253,6 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_RESIZABLE, false);
 
 	// Create window with graphics context
-	static int mainWindowWidth = 420;
-	static int mainWindowHeight = 360;
 	GLFWwindow *window = glfwCreateWindow(mainWindowWidth, mainWindowHeight, fmt::format("OVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
 	if (window == nullptr)
 		return 1;
@@ -238,44 +278,40 @@ int main(int argc, char *argv[])
 	ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
 	ImGui_ImplOpenGL3_Init(glsl_version);
+#pragma endregion
 
-	// Check for VR init errors
+#pragma region VR init check
 	EVRInitError init_error = VRInitError_None;
 	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
 		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
 	if (init_error != VRInitError_None)
 	{
 		system = nullptr;
-		// printw("%s", fmt::format("Unable to init VR runtime: {}\n", VR_GetVRInitErrorAsEnglishDescription(init_error)).c_str());
-		// refresh();
-		std::this_thread::sleep_for(4000ms);
+		printLine(window, VR_GetVRInitErrorAsEnglishDescription(init_error), 6000l);
 		return EXIT_FAILURE;
 	}
 	if (!VRCompositor())
 	{
-		// printw("Failed to initialize VR compositor.");
-		std::this_thread::sleep_for(4000ms);
+		printLine(window, "Failed to initialize VR compositor.", 6000l);
 		return EXIT_FAILURE;
 	}
+#pragma endregion
 
 	// Load settings from ini file
 	bool settingsLoaded = loadSettings();
 
-	// Set auto-start TODO: test
+	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
 
-	if (autoStartResult == 1)
-	{
-		std::this_thread::sleep_for(1000ms);
-		// printw("Done!");
-		std::this_thread::sleep_for(600ms);
-	}
-	else if (autoStartResult == 2)
-	{
-		std::this_thread::sleep_for(4000ms);
+	if (autoStartResult == 1) {
+		printLine(window, "Enabled auto-start", 2800l);
+	} else if (autoStartResult == 2) {
+		printLine(window, "Disabled auto-start", 2800l);
+	} else if (autoStartResult != 0) {
+		printLine(window, fmt::format("Error toggling auto-start ({}) ", std::to_string(autoStartResult)), 6000l);
 	}
 
-	// Minimize or hide the window if user wants to
+	// Minimize or hide the window according to config
 	if (minimizeOnStart == 1) // Minimize
 		glfwIconifyWindow(window);
 	else if (minimizeOnStart == 2) // Hide
@@ -289,24 +325,20 @@ int main(int argc, char *argv[])
 	vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section,
 							   vr::k_pch_SteamVR_SupersampleScale_Float, initialRes);
 
-	HMODULE nvmlLibrary = NULL;
-#pragma region initialise NVML
-	if (vramMonitorEnabled) {
-#ifdef _WIN32
-		nvmlLibrary = LoadLibraryA("nvml.dll");
-#else
-		void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
-#endif
-
+#pragma region Initialise NVML
+	HMODULE nvmlLibrary;
+	if (vramMonitorEnabled)
+	{
 		nvmlInit_t nvmlInitPtr;
 #ifdef _WIN32
+		nvmlLibrary = LoadLibraryA("nvml.dll");
 		nvmlInitPtr = (nvmlInit_t)GetProcAddress(nvmlLibrary, "nvmlInit");
 #else
+		void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 		nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
 #endif
-
 		if (!nvmlInitPtr)
-		nvmlEnabled = false;
+			nvmlEnabled = false;
 
 		if (nvmlEnabled)
 		{
@@ -327,19 +359,18 @@ int main(int argc, char *argv[])
 				nvmlEnabled = false;
 			else
 				result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
+
 			if (result != NVML_SUCCESS || !nvmlEnabled)
 			{
+				// Shutdown NVML
 				nvmlShutdown_t nvmlShutdownPtr;
 #ifdef _WIN32
 				nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
 #else
 				nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
 #endif
-
 				if (nvmlShutdownPtr)
-				{
 					nvmlShutdownPtr();
-				}
 			}
 		}
 	}
@@ -487,10 +518,6 @@ int main(int argc, char *argv[])
 		}
 
 		glfwPollEvents();
-		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-		{
-			continue;
-		}
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -630,6 +657,9 @@ int main(int argc, char *argv[])
 	ImGui::DestroyContext();
 	glfwDestroyWindow(window);
 	glfwTerminate();
+
+	// OpenVR cleanup
+	vr::VR_Shutdown();
 #pragma endregion
 
 	return 0;

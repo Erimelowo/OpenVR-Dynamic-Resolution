@@ -2,6 +2,8 @@
 
 [![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
 
+![screenshot of the app](image.png)
+
 Lightweight OpenVR app to dynamically adjust your HMD's resolution depending on your GPU frametime, CPU frametime and VRAM.
 
 This allows you to always play at the maximum resolution your GPU can handle while hitting your target FPS (without reprojecting). This is especially useful for games in which performance varies a lot (e.g. VRChat).
@@ -81,18 +83,17 @@ cmake -B build
 cmake --build build --config Release
 ```
 
-You can then execute the newly built binary by running:
-
-```
-.\build\Release\OpenVR-Dynamic-Resolution.exe
-```
+The newly built binary and its dependencies will be located at `\build\Release\OpenVR-Dynamic-Resolution.exe`.  
+The `resources` directory contains additional files that are distributed in releases and that you might want.  
 
 ## Licensing
 
 [BSD 3-Clause License](/LICENSE)
 
 This work is based on [SlimeVR-Feeder-App](https://github.com/SlimeVR/SlimeVR-Feeder-App) which is licensed under the BSD 3-Clause License.  
-We use the [OpenVR](https://github.com/ValveSoftware/openvr) library which is also available under the BSD 3-Clause License.  
-Additionally, we use [simpleini](https://github.com/brofield/simpleini) which is available the MIT License.  
-We also use the [fmt](https://github.com/fmtlib/fmt) library which is available under a Boost-like license. 
-Finally, we use [DearImGui](https://github.com/ocornut/imgui) which is available under the MIT license.
+We also use:  
+- The [OpenVR](https://github.com/ValveSoftware/openvr) library which is also available under the BSD 3-Clause License.  
+- [simpleini](https://github.com/brofield/simpleini) which is available the MIT License.  
+- The [fmt](https://github.com/fmtlib/fmt) library which is available under a Boost-like license. 
+- [DearImGui](https://github.com/ocornut/imgui) which is available under the MIT license.
+- [lodepng](https://github.com/lvandeve/lodepng/blob/master/LICENSE) which is available under the zlib license.

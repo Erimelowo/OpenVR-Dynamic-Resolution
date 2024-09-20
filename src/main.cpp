@@ -24,16 +24,21 @@
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+// Loading png
+#include "lodepng.h"
+
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v1.0.0-rc.1";
+static constexpr const char *version = "v1.0.0";
+
+static constexpr const char *iconPath = "icon.png";
 
 static std::chrono::milliseconds refreshIntervalBackground = 167ms; // 6fps
 static std::chrono::milliseconds refreshIntervalFocused = 33ms; // 30fps
 
-static int mainWindowWidth = 420;
-static int mainWindowHeight = 360;
+static int mainWindowWidth = 350;
+static int mainWindowHeight = 300;
 
 bool nvmlEnabled = true;
 
@@ -45,16 +50,16 @@ int minimizeOnStart = 0;
 
 // Resolution
 float initialRes = 1.0f;
-float minRes = 0.60;
+float minRes = 0.80;
 float maxRes = 5.0f;
-long dataPullDelayMs = 250;
-long resChangeDelayMs = 1400;
+long dataPullDelayMs = 200; // TODO get rid of this
+long resChangeDelayMs = 1800;
 float minCpuTimeThreshold = 1.0f;
 float resIncreaseMin = 0.03f;
 float resDecreaseMin = 0.09f;
 float resIncreaseScale = 0.60f;
-float resDecreaseScale = 0.9;
-float resIncreaseThreshold = 0.75;
+float resDecreaseScale = 0.90;
+float resIncreaseThreshold = 0.80;
 float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 16;
 int resetOnThreshold = 1;
@@ -80,6 +85,18 @@ std::set<std::string> splitConfigValue(const std::string &val)
 	}
 
 	return set;
+}
+
+const std::string mergeConfigValue(std::set<std::string> &valSet)
+{
+	std::string result = "";
+
+	for(std::string val : valSet)
+	{
+		result += (val + " ");
+	}
+
+	return result;
 }
 
 bool loadSettings()
@@ -115,9 +132,45 @@ bool loadSettings()
 	vramOnlyMode = std::stoi(ini.GetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
 	preferReprojection = std::stoi(ini.GetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str()));
 	ignoreCpuTime = std::stoi(ini.GetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
-	disabledApps = splitConfigValue(ini.GetValue("Resolution", "disabledApps", ""));
+	disabledApps = splitConfigValue(ini.GetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str()));
 
 	return true;
+}
+
+void saveSettings()
+{
+	// Get ini file
+	CSimpleIniA ini;
+
+	// Set setting values
+	ini.SetValue("Initialization", "autoStart", std::to_string(autoStart).c_str());
+	ini.SetValue("Initialization", "minimizeOnStart", std::to_string(minimizeOnStart).c_str());
+
+	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes * 100.0f).c_str());
+	ini.SetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str());
+	ini.SetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str());
+	ini.SetValue("Resolution", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str());
+	ini.SetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
+	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
+	ini.SetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str());
+	ini.SetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str());
+	ini.SetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale * 100.0f).c_str());
+	ini.SetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale * 100.0f).c_str());
+	ini.SetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str());
+	ini.SetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str());
+	ini.SetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str());
+	ini.SetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str());
+	ini.SetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str());
+	ini.SetValue("Resolution", "vramTarget", std::to_string(vramTarget * 100.0f).c_str());
+	ini.SetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str());
+	ini.SetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
+	ini.SetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str());
+	ini.SetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str());
+	ini.SetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str());
+
+	// Save changes to disk
+	ini.SaveFile("settings.ini");
 }
 #pragma endregion
 
@@ -215,7 +268,7 @@ void printLine(GLFWwindow *window, std::string text, long duration) {
 		ImGui::NewFrame();
 
 		// Create the main window
-		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		// Set position and size to fill the main window
 		ImGui::SetWindowPos(ImVec2(0, 0));
@@ -268,9 +321,10 @@ int main(int argc, char *argv[])
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-
-	// Set window icon TODO
-	// glfwSetWindowIcon(window, 1, )
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.12, 0.12, 12));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.25, 0.25, 1));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.17, 0.17, 1));
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -278,6 +332,18 @@ int main(int argc, char *argv[])
 	ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
 	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	// Set window icon 
+	GLFWimage icon;
+	unsigned iconWidth, iconHeight;
+    unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
+	icon.width = (int)iconWidth;
+	icon.height = (int)iconHeight;
+	glfwSetWindowIcon(window, 1, &icon);
+
+	// TODO Add tray icon
+	// https://github.com/Soundux/traypp
+
 #pragma endregion
 
 #pragma region VR init check
@@ -298,7 +364,10 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 	// Load settings from ini file
-	bool settingsLoaded = loadSettings();
+	if(!loadSettings()) {
+		saveSettings();
+		printLine(window, "Error loading settings.ini, restoring defaults", 4100l);
+	}
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
@@ -315,7 +384,7 @@ int main(int argc, char *argv[])
 	if (minimizeOnStart == 1) // Minimize
 		glfwIconifyWindow(window);
 	else if (minimizeOnStart == 2) // Hide
-		glfwHideWindow(window);
+		glfwHideWindow(window); 
 
 	// Make sure we can set resolution ourselves (Custom instead of Auto)
 	vr::VRSettings()->SetInt32(vr::k_pch_SteamVR_Section,
@@ -383,8 +452,9 @@ int main(int argc, char *argv[])
 	std::list<float> cpuTimes;
 
 	// event loop
-	while (!glfwWindowShouldClose(window) || false) // TODO OpenVR exit
+	while (!glfwWindowShouldClose(window) || false) // TODO OpenVR exit and static FPS 
 	{
+#pragma region Resolution adjustment
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
 
@@ -416,6 +486,7 @@ int main(int argc, char *argv[])
 		float realCpuTime = cpuTime;
 		cpuTime *= min(frameShown, floor(gpuTime / targetFrametime) + 1);
 
+		// TODO use framebuffer for this
 		// Calculate average GPU frametime
 		gpuTimes.push_front(gpuTime);
 		if (gpuTimes.size() > dataAverageSamples)
@@ -516,6 +587,7 @@ int main(int argc, char *argv[])
 				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes);
 			}
 		}
+#pragma endregion
 
 		glfwPollEvents();
 
@@ -525,19 +597,11 @@ int main(int argc, char *argv[])
 		ImGui::NewFrame();
 
 		// Create the main window
-		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		// Set position and size to fill the main window
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
-
-		// Settings status
-		if (settingsLoaded)
-			ImGui::Text(fmt::format("settings.ini successfully loaded").c_str());
-		else
-			ImGui::Text(fmt::format("Error loading settings.ini (default values used)").c_str());
-
-		ImGui::NewLine();
 
 		// HMD Hz
 		ImGui::Text(fmt::format("HMD Hz: {} fps", std::to_string(int(targetFps))).c_str());
@@ -557,7 +621,7 @@ int main(int argc, char *argv[])
 		// VRAM target and limit
 		if (vramMonitorEnabled)
 		{
-			ImGui::Text(fmt::format("VRAM target: {}%", std::to_string(vramTarget * 100).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("VRAM target: {}%", std::to_string(vramTarget * 100).substr(0, 4)).c_str()); // TODO do something about missing %
 			ImGui::Text(fmt::format("VRAM limit: {}%", std::to_string(vramLimit * 100).substr(0, 4)).c_str());
 		}
 		else
@@ -598,16 +662,19 @@ int main(int argc, char *argv[])
 			ImGui::Text("Reprojecting: No");
 		}
 
-		ImGui::NewLine();
-
 		// Current resolution
 		ImGui::Text(fmt::format("Resolution = {}%", std::to_string(int(newRes * 100))).c_str());
-
 		// Resolution adjustment status
 		if (!adjustResolution)
 		{
-			ImGui::Text("Resolution adjustment paused");
+			ImGui::SameLine(0, 10);
+			ImGui::Text("(adjustment paused)");
 		}
+
+		ImGui::NewLine();
+
+		ImGui::Button("Settings", ImVec2(82, 28));
+		// TODO show settings panel
 
 		// Stop creating the main window
 		ImGui::End();

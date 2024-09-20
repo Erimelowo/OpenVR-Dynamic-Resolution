@@ -50,7 +50,7 @@ int minimizeOnStart = 0;
 
 // Resolution
 float initialRes = 1.0f;
-float minRes = 0.80;
+float minRes = 0.75;
 float maxRes = 5.0f;
 long dataPullDelayMs = 200; // TODO get rid of this
 long resChangeDelayMs = 1800;
@@ -450,9 +450,10 @@ int main(int argc, char *argv[])
 	bool adjustResolution = true;
 	std::list<float> gpuTimes;
 	std::list<float> cpuTimes;
+	bool openvrQuit = false;
 
 	// event loop
-	while (!glfwWindowShouldClose(window) || false) // TODO OpenVR exit and static FPS 
+	while (!glfwWindowShouldClose(window) && !openvrQuit)
 	{
 #pragma region Resolution adjustment
 		// Get current time
@@ -589,6 +590,7 @@ int main(int argc, char *argv[])
 		}
 #pragma endregion
 
+#pragma region Gui rendering
 		glfwPollEvents();
 
 		// Start the Dear ImGui frame
@@ -684,8 +686,10 @@ int main(int argc, char *argv[])
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);
+#pragma endregion
 
 		// Calculate how long to sleep for
+		// TODO static fps/depending on window focus
 		long sleepTime = dataPullDelayMs;
 		if (dataPullDelayMs < currentTime - lastChangeTime && resChangeDelayMs < currentTime - lastChangeTime)
 		{
@@ -698,9 +702,24 @@ int main(int argc, char *argv[])
 
 		// ZZzzzz
 		std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
+
+		// Check if OpenVR is quitting so we can quit alongside it
+		VREvent_t vrEvent;
+		while (vr::VRSystem()->PollNextEvent(&vrEvent, sizeof(vr::VREvent_t)))
+		{
+			if (vrEvent.eventType == vr::VREvent_Quit)
+			{
+				vr::VRSystem()->AcknowledgeQuit_Exiting();
+				openvrQuit = true;
+				break;
+			}
+		}
 	}
 
 #pragma region Cleanup
+	// OpenVR cleanup
+	vr::VR_Shutdown();
+
 	// NVML cleanup
 #ifdef _WIN32
 	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
@@ -725,8 +744,6 @@ int main(int argc, char *argv[])
 	glfwDestroyWindow(window);
 	glfwTerminate();
 
-	// OpenVR cleanup
-	vr::VR_Shutdown();
 #pragma endregion
 
 	return 0;

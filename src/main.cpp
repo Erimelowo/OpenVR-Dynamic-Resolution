@@ -34,13 +34,13 @@ static constexpr const char *version = "v1.0.0";
 
 static constexpr const char *iconPath = "icon.png";
 
-static std::chrono::milliseconds refreshIntervalBackground = 167ms; // 6fps
-static std::chrono::milliseconds refreshIntervalFocused = 33ms; // 30fps
+static constexpr const std::chrono::milliseconds refreshIntervalBackground = 167ms; // 6fps
+static constexpr const std::chrono::milliseconds refreshIntervalFocused = 33ms; // 30fps
 
-static int mainWindowWidth = 350;
-static int mainWindowHeight = 300;
+static constexpr const int mainWindowWidth = 350;
+static constexpr const int mainWindowHeight = 300;
 
-bool nvmlEnabled = true;
+static constexpr const float bitsToGB = 1073741824;
 
 #pragma region Config
 #pragma region Default settings
@@ -174,7 +174,9 @@ void saveSettings()
 }
 #pragma endregion
 
-#pragma region NVML methods
+#pragma region NVML
+bool nvmlEnabled = true;
+
 typedef enum nvmlReturn_enum
 {
 	NVML_SUCCESS = 0,					// The operation was successful.
@@ -202,32 +204,6 @@ typedef HMODULE(nvmlLib);
 #else
 typedef void *(nvmlLib);
 #endif
-
-nvmlDevice_t nvmlDevice;
-
-float getVramUsage(nvmlLib nvmlLibrary)
-{
-	if (!vramMonitorEnabled || !nvmlLibrary)
-		return 0.0f;
-
-	nvmlReturn_t result;
-	nvmlMemory_t memoryInfo;
-	unsigned int deviceCount;
-
-	// Get memory info
-	nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
-#ifdef _WIN32
-	nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#else
-	nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#endif
-	result = nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &memoryInfo);
-	if (result != NVML_SUCCESS)
-		return -result;
-
-	// Return VRAM usage as a percentage
-	return (float)memoryInfo.used / (float)memoryInfo.total;
-}
 #pragma endregion
 
 long getCurrentTimeMillis()
@@ -396,6 +372,10 @@ int main(int argc, char *argv[])
 
 #pragma region Initialise NVML
 	HMODULE nvmlLibrary;
+	nvmlDevice_t nvmlDevice;
+	nvmlMemory_t nvmlMemory;
+	float vramTotalGB;
+
 	if (vramMonitorEnabled)
 	{
 		nvmlInit_t nvmlInitPtr;
@@ -440,8 +420,22 @@ int main(int argc, char *argv[])
 #endif
 				if (nvmlShutdownPtr)
 					nvmlShutdownPtr();
-			}
+			} else {
+				// Get memory info
+				nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
+#ifdef _WIN32
+				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#else
+				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#endif
+				if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
+					nvmlEnabled = false;
+				else
+					vramTotalGB = (float)nvmlMemory.total / bitsToGB;
+				}
 		}
+	} else {
+		nvmlEnabled = false;
 	}
 #pragma endregion
 
@@ -519,7 +513,12 @@ int main(int argc, char *argv[])
 		}
 
 		// Get VRAM usage
-		float vramUsage = getVramUsage(nvmlLibrary);
+		float vramUsedGB = (float)nvmlMemory.used / bitsToGB;
+		float vramUsed;
+		if (nvmlEnabled) // Get the VRAM used in %
+			vramUsed  = (float)nvmlMemory.used / (float)nvmlMemory.total;
+		else // Assume we always have free VRAM
+			vramUsed = 0;
 
 		// Resolution handling
 		if (currentTime - resChangeDelayMs > lastChangeTime)
@@ -540,7 +539,7 @@ int main(int argc, char *argv[])
 				if ((averageCpuTime > minCpuTimeThreshold || vramOnlyMode))
 				{
 					// Frametime
-					if (averageGpuTime < targetFrametime * resIncreaseThreshold && vramUsage < vramTarget && !vramOnlyMode)
+					if (averageGpuTime < targetFrametime * resIncreaseThreshold && vramUsed < vramTarget && !vramOnlyMode)
 					{
 						// Increase resolution
 						newRes += ((((targetFrametime * resIncreaseThreshold) - averageGpuTime) / targetFrametime) *
@@ -556,12 +555,12 @@ int main(int argc, char *argv[])
 					}
 
 					// VRAM
-					if (vramUsage > vramLimit)
+					if (vramUsed > vramLimit)
 					{
 						// Force the resolution to decrease when the vram limit is reached
 						newRes -= resDecreaseMin;
 					}
-					else if (vramOnlyMode && newRes < initialRes && vramUsage < vramTarget)
+					else if (vramOnlyMode && newRes < initialRes && vramUsed < vramTarget)
 					{
 						// When in VRAM-only mode, make sure the res goes back up when possible.
 						newRes = min(initialRes, newRes + resIncreaseMin);
@@ -605,6 +604,8 @@ int main(int argc, char *argv[])
 		ImGui::SetWindowPos(ImVec2(0, 0));
 		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
 
+		// TODO improve this part of the GUI (groups and graphs)
+
 		// HMD Hz
 		ImGui::Text(fmt::format("HMD Hz: {} fps", std::to_string(int(targetFps))).c_str());
 
@@ -621,10 +622,10 @@ int main(int argc, char *argv[])
 		}
 
 		// VRAM target and limit
-		if (vramMonitorEnabled)
+		if (nvmlEnabled && nvmlEnabled)
 		{
-			ImGui::Text(fmt::format("VRAM target: {}%", std::to_string(vramTarget * 100).substr(0, 4)).c_str()); // TODO do something about missing %
-			ImGui::Text(fmt::format("VRAM limit: {}%", std::to_string(vramLimit * 100).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("VRAM target: {} GB", std::to_string(vramTarget * vramTotalGB).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("VRAM limit: {} GB", std::to_string(vramLimit * vramTotalGB).substr(0, 4)).c_str());
 		}
 		else
 		{
@@ -641,8 +642,8 @@ int main(int argc, char *argv[])
 		ImGui::Text(fmt::format("Raw CPU frametime: {} ms", std::to_string(realCpuTime).substr(0, 4)).c_str());
 
 		// VRAM usage
-		if (vramMonitorEnabled)
-			ImGui::Text(fmt::format("VRAM usage: {}%", std::to_string(vramUsage * 100).substr(0, 4)).c_str());
+		if (nvmlEnabled)
+			ImGui::Text(fmt::format("VRAM usage: {} GB", std::to_string(vramUsedGB).substr(0, 4)).c_str());
 		else
 			ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
 
@@ -665,7 +666,7 @@ int main(int argc, char *argv[])
 		}
 
 		// Current resolution
-		ImGui::Text(fmt::format("Resolution = {}%", std::to_string(int(newRes * 100))).c_str());
+		ImGui::Text(fmt::format("Resolution = {}", std::to_string(int(newRes * 100))).c_str());
 		// Resolution adjustment status
 		if (!adjustResolution)
 		{

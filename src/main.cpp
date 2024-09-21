@@ -35,7 +35,7 @@ static constexpr const char *version = "v1.0.0";
 static constexpr const char *iconPath = "icon.png";
 
 static constexpr const std::chrono::milliseconds refreshIntervalBackground = 167ms; // 6fps
-static constexpr const std::chrono::milliseconds refreshIntervalFocused = 33ms; // 30fps
+static constexpr const std::chrono::milliseconds refreshIntervalFocused = 33ms;		// 30fps
 
 static constexpr const int mainWindowWidth = 350;
 static constexpr const int mainWindowHeight = 300;
@@ -52,7 +52,6 @@ int minimizeOnStart = 0;
 float initialRes = 1.0f;
 float minRes = 0.75;
 float maxRes = 5.0f;
-long dataPullDelayMs = 200; // TODO get rid of this
 long resChangeDelayMs = 1800;
 float minCpuTimeThreshold = 1.0f;
 float resIncreaseMin = 0.03f;
@@ -61,7 +60,7 @@ float resIncreaseScale = 0.60f;
 float resDecreaseScale = 0.90;
 float resIncreaseThreshold = 0.80;
 float resDecreaseThreshold = 0.85f;
-int dataAverageSamples = 16;
+int dataAverageSamples = 100;
 int resetOnThreshold = 1;
 int alwaysReproject = 0;
 float vramTarget = 0.8;
@@ -91,7 +90,7 @@ const std::string mergeConfigValue(std::set<std::string> &valSet)
 {
 	std::string result = "";
 
-	for(std::string val : valSet)
+	for (std::string val : valSet)
 	{
 		result += (val + " ");
 	}
@@ -114,7 +113,6 @@ bool loadSettings()
 	initialRes = std::stof(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes * 100.0f).c_str())) / 100.0f;
 	minRes = std::stof(ini.GetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
 	maxRes = std::stof(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
-	dataPullDelayMs = std::stol(ini.GetValue("Resolution", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str()));
 	resChangeDelayMs = std::stol(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
 	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
 	resIncreaseMin = std::stof(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str())) / 100.0f;
@@ -124,6 +122,8 @@ bool loadSettings()
 	resIncreaseThreshold = std::stof(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str())) / 100.0f;
 	resDecreaseThreshold = std::stof(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str())) / 100.0f;
 	dataAverageSamples = std::stoi(ini.GetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+	if (dataAverageSamples > 128)
+		dataAverageSamples = 128; // Max stored by OpenVR
 	resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
 	alwaysReproject = std::stoi(ini.GetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
 	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
@@ -149,7 +149,6 @@ void saveSettings()
 	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes * 100.0f).c_str());
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str());
 	ini.SetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str());
-	ini.SetValue("Resolution", "dataPullDelayMs", std::to_string(dataPullDelayMs).c_str());
 	ini.SetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
 	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
 	ini.SetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str());
@@ -232,10 +231,12 @@ std::string getCurrentApplicationKey()
 	return {applicationKey};
 }
 
-void printLine(GLFWwindow *window, std::string text, long duration) {
+void printLine(GLFWwindow *window, std::string text, long duration)
+{
 	long startTime = getCurrentTimeMillis();
 
-	while (getCurrentTimeMillis() < startTime + duration && !glfwWindowShouldClose(window)) {
+	while (getCurrentTimeMillis() < startTime + duration && !glfwWindowShouldClose(window))
+	{
 		glfwPollEvents();
 
 		// Start the Dear ImGui frame
@@ -269,7 +270,7 @@ void printLine(GLFWwindow *window, std::string text, long duration) {
 
 int main(int argc, char *argv[])
 {
-#pragma region  GUI init
+#pragma region GUI init
 	if (!glfwInit())
 		return 1;
 
@@ -309,10 +310,10 @@ int main(int argc, char *argv[])
 #endif
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-	// Set window icon 
+	// Set window icon
 	GLFWimage icon;
 	unsigned iconWidth, iconHeight;
-    unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
+	unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
 	icon.width = (int)iconWidth;
 	icon.height = (int)iconHeight;
 	glfwSetWindowIcon(window, 1, &icon);
@@ -340,7 +341,8 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 	// Load settings from ini file
-	if(!loadSettings()) {
+	if (!loadSettings())
+	{
 		saveSettings();
 		printLine(window, "Error loading settings.ini, restoring defaults", 4100l);
 	}
@@ -348,11 +350,16 @@ int main(int argc, char *argv[])
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
 
-	if (autoStartResult == 1) {
+	if (autoStartResult == 1)
+	{
 		printLine(window, "Enabled auto-start", 2800l);
-	} else if (autoStartResult == 2) {
+	}
+	else if (autoStartResult == 2)
+	{
 		printLine(window, "Disabled auto-start", 2800l);
-	} else if (autoStartResult != 0) {
+	}
+	else if (autoStartResult != 0)
+	{
 		printLine(window, fmt::format("Error toggling auto-start ({}) ", std::to_string(autoStartResult)), 6000l);
 	}
 
@@ -360,7 +367,7 @@ int main(int argc, char *argv[])
 	if (minimizeOnStart == 1) // Minimize
 		glfwIconifyWindow(window);
 	else if (minimizeOnStart == 2) // Hide
-		glfwHideWindow(window); 
+		glfwHideWindow(window);
 
 	// Make sure we can set resolution ourselves (Custom instead of Auto)
 	vr::VRSettings()->SetInt32(vr::k_pch_SteamVR_Section,
@@ -420,7 +427,9 @@ int main(int argc, char *argv[])
 #endif
 				if (nvmlShutdownPtr)
 					nvmlShutdownPtr();
-			} else {
+			}
+			else
+			{
 				// Get memory info
 				nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
 #ifdef _WIN32
@@ -432,107 +441,128 @@ int main(int argc, char *argv[])
 					nvmlEnabled = false;
 				else
 					vramTotalGB = (float)nvmlMemory.total / bitsToGB;
-				}
+			}
 		}
-	} else {
+	}
+	else
+	{
 		nvmlEnabled = false;
 	}
 #pragma endregion
 
 	// Initialize loop variables
+	auto *frameTiming = new vr::Compositor_FrameTiming;
 	long lastChangeTime = getCurrentTimeMillis();
 	bool adjustResolution = true;
-	std::list<float> gpuTimes;
-	std::list<float> cpuTimes;
 	bool openvrQuit = false;
+
+	float averageGpuTime = 0;
+	float averageCpuTime = 0;
+	int averageFrameShown = 0;
+	float newRes = 0;
+	float targetFps = 0;
+	float targetFrametime = 0;
+	float hmdHz = 0;
+	float hmdFrametime = 0;
+	int currentFps = 0;
+	float vramUsedGB = 0;
+
+	bool showSettings = false;
 
 	// event loop
 	while (!glfwWindowShouldClose(window) && !openvrQuit)
 	{
-#pragma region Resolution adjustment
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
 
-		// Fetch resolution and target fps
-		float newRes = vr::VRSettings()->GetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float);
-		float lastRes = newRes;
-		float targetFps = std::round(vr::VRSystem()->GetFloatTrackedDeviceProperty(0, Prop_DisplayFrequency_Float));
-		float targetFrametime = 1000 / targetFps;
-		float realTargetFrametime = targetFrametime;
-
-		// Get current frame
-		auto *frameTiming = new vr::Compositor_FrameTiming;
-		frameTiming->m_nSize = sizeof(Compositor_FrameTiming);
-		vr::VRCompositor()->GetFrameTiming(frameTiming);
-
-		// Get total GPU Frametime
-		float gpuTime = frameTiming->m_flTotalRenderGpuMs;
-		// Calculate total CPU Frametime
-		// https://github.com/Louka3000/OpenVR-Dynamic-Resolution/issues/18#issuecomment-1833105172
-		float cpuTime = frameTiming->m_flCompositorRenderCpuMs									 // Compositor
-						+ (frameTiming->m_flNewFrameReadyMs - frameTiming->m_flNewPosesReadyMs); // Application & Late Start
-
-		// How many times the current frame repeated (>1 = reprojecting)
-		uint32_t frameShown = frameTiming->m_nNumFramePresents;
-		// Reason reprojection is happening
-		uint32_t reprojectionFlag = frameTiming->m_nReprojectionFlags;
-
-		// Adjust the CPU time off GPU reprojection.
-		float realCpuTime = cpuTime;
-		cpuTime *= min(frameShown, floor(gpuTime / targetFrametime) + 1);
-
-		// TODO use framebuffer for this
-		// Calculate average GPU frametime
-		gpuTimes.push_front(gpuTime);
-		if (gpuTimes.size() > dataAverageSamples)
-			gpuTimes.pop_back();
-		float averageGpuTime = 0;
-		for (float time : gpuTimes)
-			averageGpuTime += time;
-		averageGpuTime /= gpuTimes.size();
-		// Caculate average CPU frametime
-		cpuTimes.push_front(cpuTime);
-		if (cpuTimes.size() > dataAverageSamples)
-			cpuTimes.pop_back();
-		float averageCpuTime = 0;
-		for (float time : cpuTimes)
-			averageCpuTime += time;
-		averageCpuTime /= cpuTimes.size();
-
-		// Estimated current FPS
-		uint32_t currentFps = targetFps / frameShown;
-		if (averageCpuTime > targetFrametime)
-			currentFps /= fmod(averageCpuTime, targetFrametime) / targetFrametime + 1;
-
-		// Double the target frametime if the user wants to,
-		// or if CPU Frametime is double the target frametime,
-		// or if preferReprojection is true and CPU Frametime is greated than targetFrametime.
-		if ((((averageCpuTime > targetFrametime && preferReprojection) || averageCpuTime / 2 > targetFrametime) && !ignoreCpuTime) || alwaysReproject)
-		{
-			targetFrametime *= 2;
-		}
-
-		// Get VRAM usage
-		float vramUsedGB = (float)nvmlMemory.used / bitsToGB;
-		float vramUsed;
-		if (nvmlEnabled) // Get the VRAM used in %
-			vramUsed  = (float)nvmlMemory.used / (float)nvmlMemory.total;
-		else // Assume we always have free VRAM
-			vramUsed = 0;
-
-		// Resolution handling
+		// Doesn't run every loop
 		if (currentTime - resChangeDelayMs > lastChangeTime)
 		{
 			lastChangeTime = currentTime;
+
+#pragma region Getting data
+			// Fetch resolution and target fps
+			newRes = vr::VRSettings()->GetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float);
+			float lastRes = newRes;
+			targetFps = std::round(vr::VRSystem()->GetFloatTrackedDeviceProperty(0, Prop_DisplayFrequency_Float));
+			targetFrametime = 1000 / targetFps;
+			hmdHz = targetFps;
+			hmdFrametime = targetFrametime;
+
+			// Define totals
+			float totalGpuTime = 0;
+			float totalCpuTime = 0;
+			int frameShownTotal = 0;
+
+			// Loop through past frames
+			frameTiming->m_nSize = sizeof(Compositor_FrameTiming);
+			for (int i = 0; i < dataAverageSamples; i++)
+			{
+				// Get current frame
+				vr::VRCompositor()->GetFrameTiming(frameTiming, i);
+
+				// Get GPU frametime
+				float gpuTime = frameTiming->m_flTotalRenderGpuMs;
+
+				// Calculate CPU frametime
+				// https://github.com/Louka3000/OpenVR-Dynamic-Resolution/issues/18#issuecomment-1833105172
+				float cpuTime = frameTiming->m_flCompositorRenderCpuMs									 // Compositor
+								+ (frameTiming->m_flNewFrameReadyMs - frameTiming->m_flNewPosesReadyMs); // Application & Late Start
+
+				// How many times the current frame repeated (>1 = reprojecting)
+				uint32_t frameShown = frameTiming->m_nNumFramePresents;
+				// Reason reprojection is happening
+				uint32_t reprojectionFlag = frameTiming->m_nReprojectionFlags;
+
+				// Calculate the adjusted CPU time off reprojection.
+				cpuTime *= min(frameShown, floor(gpuTime / targetFrametime) + 1);
+
+				// Add to totals
+				totalGpuTime += gpuTime;
+				totalCpuTime += cpuTime;
+				frameShownTotal += frameShown;
+			}
+
+			// Calculate averages
+			averageGpuTime = totalGpuTime / dataAverageSamples;
+			averageCpuTime = totalCpuTime / dataAverageSamples;
+			averageFrameShown = frameShownTotal / dataAverageSamples;
+
+			// Estimated current FPS
+			currentFps = targetFps / averageFrameShown;
+			if (averageCpuTime > targetFrametime)
+				currentFps /= fmod(averageCpuTime, targetFrametime) / targetFrametime + 1;
+
+			// Double the target frametime if the user wants to,
+			// or if CPU Frametime is double the target frametime,
+			// or if preferReprojection is true and CPU Frametime is greated than targetFrametime.
+			if ((((averageCpuTime > targetFrametime && preferReprojection) ||
+				  averageCpuTime / 2 > targetFrametime) &&
+				 !ignoreCpuTime) ||
+				alwaysReproject)
+			{
+				targetFps /= 2;
+				targetFrametime *= 2;
+			}
+
+			// Get VRAM usage
+			vramUsedGB = (float)nvmlMemory.used / bitsToGB;
+			float vramUsed;
+			if (nvmlEnabled) // Get the VRAM used in %
+				vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
+			else // Assume we always have free VRAM
+				vramUsed = 0;
 
 			// Check if the SteamVR dashboard is open
 			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
 			// Check that we're in a supported application
 			std::string appKey = getCurrentApplicationKey();
 			bool isCurrentAppDisabled = disabledApps.find(appKey) != disabledApps.end() || appKey == "";
+#pragma endregion
+
+#pragma region Resolution adjustment
 			// Only adjust resolution if not in dashboard and in a supported application
 			adjustResolution = !inDashboard && !isCurrentAppDisabled;
-
 			if (adjustResolution)
 			{
 				// Adjust resolution
@@ -597,90 +627,89 @@ int main(int argc, char *argv[])
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		// Create the main window
-		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
-
-		// Set position and size to fill the main window
-		ImGui::SetWindowPos(ImVec2(0, 0));
-		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
-
-		// TODO improve this part of the GUI (groups and graphs)
-
-		// HMD Hz
-		ImGui::Text(fmt::format("HMD Hz: {} fps", std::to_string(int(targetFps))).c_str());
-
-		// Target frametime
-		if (!vramOnlyMode)
+#pragma region Main window
 		{
-			ImGui::Text(fmt::format("HMD Hz target frametime: {} ms", std::to_string(realTargetFrametime).substr(0, 4)).c_str());
-			ImGui::Text(fmt::format("Adjusted target frametime: {} ms", std::to_string(targetFrametime).substr(0, 4)).c_str());
+			// Create the main window
+			ImGui::Begin("Main", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+
+			// Set position and size to fill the viewport
+			ImGui::SetWindowPos(ImVec2(0, 0));
+			ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
+
+			// HMD Hz
+			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({} ms)", std::to_string(int(hmdHz)), std::to_string(hmdFrametime).substr(0, 4)).c_str());
+
+			// Target FPS and frametime
+			if (!vramOnlyMode)
+			{
+				ImGui::Text(fmt::format("Target FPS: {} fps ({} ms)", std::to_string(int(targetFps)), std::to_string(targetFrametime).substr(0, 4)).c_str());
+			}
+			else
+			{
+				ImGui::Text("Target FPS: Disabled");
+			}
+
+			// VRAM target and limit
+			if (nvmlEnabled && nvmlEnabled)
+			{
+				ImGui::Text(fmt::format("VRAM target: {} GB", std::to_string(vramTarget * vramTotalGB).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("VRAM limit: {} GB ", std::to_string(vramLimit * vramTotalGB).substr(0, 4)).c_str());
+			}
+			else
+			{
+				ImGui::Text(fmt::format("VRAM target: Disabled").c_str());
+				ImGui::Text(fmt::format("VRAM limit: Disabled").c_str());
+			}
+
+			ImGui::NewLine();
+
+			// FPS and frametimes
+			ImGui::Text(fmt::format("FPS: {} fps", std::to_string(currentFps)).c_str());
+			ImGui::Text(fmt::format("GPU frametime: {} ms", std::to_string(averageGpuTime).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("CPU frametime: {} ms", std::to_string(averageCpuTime).substr(0, 4)).c_str());
+
+			// VRAM usage
+			if (nvmlEnabled)
+				ImGui::Text(fmt::format("VRAM usage: {} GB", std::to_string(vramUsedGB).substr(0, 4)).c_str());
+			else
+				ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
+
+			ImGui::NewLine();
+
+			// Reprojecting status
+			if (averageFrameShown > 1)
+			{
+				std::string reason;
+				if (averageGpuTime > averageCpuTime)
+					reason = "GPU";
+				else
+					reason = "CPU";
+
+				ImGui::Text(fmt::format("Reprojecting: Yes ({}x, {})", averageFrameShown, reason).c_str());
+			}
+			else
+			{
+				ImGui::Text("Reprojecting: No");
+			}
+
+			// Current resolution
+			ImGui::Text(fmt::format("Resolution = {}", std::to_string(int(newRes * 100))).c_str());
+			// Resolution adjustment status
+			if (!adjustResolution)
+			{
+				ImGui::SameLine(0, 10);
+				ImGui::Text("(adjustment paused)");
+			}
+
+			ImGui::NewLine();
+
+			showSettings = ImGui::Button("Settings", ImVec2(82, 28));
+			// TODO show settings panel
+
+			// Stop creating the main window
+			ImGui::End();
 		}
-		else
-		{
-			ImGui::Text("Adjusted target frametime: Disabled");
-			ImGui::Text("HMD Hz target frametime: Disabled");
-		}
-
-		// VRAM target and limit
-		if (nvmlEnabled && nvmlEnabled)
-		{
-			ImGui::Text(fmt::format("VRAM target: {} GB", std::to_string(vramTarget * vramTotalGB).substr(0, 4)).c_str());
-			ImGui::Text(fmt::format("VRAM limit: {} GB", std::to_string(vramLimit * vramTotalGB).substr(0, 4)).c_str());
-		}
-		else
-		{
-			ImGui::Text(fmt::format("VRAM target: Disabled").c_str());
-			ImGui::Text(fmt::format("VRAM limit: Disabled").c_str());
-		}
-
-		ImGui::NewLine();
-
-		// FPS and frametimes
-		ImGui::Text(fmt::format("FPS: {} fps", std::to_string(currentFps)).c_str());
-		ImGui::Text(fmt::format("GPU frametime: {} ms", std::to_string(averageGpuTime).substr(0, 4)).c_str());
-		ImGui::Text(fmt::format("CPU frametime: {} ms", std::to_string(averageCpuTime).substr(0, 4)).c_str());
-		ImGui::Text(fmt::format("Raw CPU frametime: {} ms", std::to_string(realCpuTime).substr(0, 4)).c_str());
-
-		// VRAM usage
-		if (nvmlEnabled)
-			ImGui::Text(fmt::format("VRAM usage: {} GB", std::to_string(vramUsedGB).substr(0, 4)).c_str());
-		else
-			ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
-
-		ImGui::NewLine();
-
-		// Reprojecting status
-		if (frameShown > 1)
-		{
-			std::string reason = fmt::format("Other [{}]", reprojectionFlag).c_str();
-			if (reprojectionFlag == 20)
-				reason = "CPU";
-			else if (reprojectionFlag == 276)
-				reason = "GPU";
-
-			ImGui::Text(fmt::format("Reprojecting: Yes ({}x, {})", frameShown, reason).c_str());
-		}
-		else
-		{
-			ImGui::Text("Reprojecting: No");
-		}
-
-		// Current resolution
-		ImGui::Text(fmt::format("Resolution = {}", std::to_string(int(newRes * 100))).c_str());
-		// Resolution adjustment status
-		if (!adjustResolution)
-		{
-			ImGui::SameLine(0, 10);
-			ImGui::Text("(adjustment paused)");
-		}
-
-		ImGui::NewLine();
-
-		ImGui::Button("Settings", ImVec2(82, 28));
-		// TODO show settings panel
-
-		// Stop creating the main window
-		ImGui::End();
+#pragma endregion
 
 		// Rendering
 		ImGui::Render();
@@ -688,21 +717,6 @@ int main(int argc, char *argv[])
 
 		glfwSwapBuffers(window);
 #pragma endregion
-
-		// Calculate how long to sleep for
-		// TODO static fps/depending on window focus
-		long sleepTime = dataPullDelayMs;
-		if (dataPullDelayMs < currentTime - lastChangeTime && resChangeDelayMs < currentTime - lastChangeTime)
-		{
-			sleepTime = (currentTime - lastChangeTime) - resChangeDelayMs;
-		}
-		else if (resChangeDelayMs < dataPullDelayMs)
-		{
-			sleepTime = resChangeDelayMs;
-		}
-
-		// ZZzzzz
-		std::this_thread::sleep_for(std::chrono::milliseconds(sleepTime));
 
 		// Check if OpenVR is quitting so we can quit alongside it
 		VREvent_t vrEvent;
@@ -715,6 +729,16 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
+
+		// Calculate how long to sleep for depending on if the window is focused or not.
+		std::chrono::milliseconds sleepTime;
+		if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
+			sleepTime = refreshIntervalFocused;
+		else 
+			sleepTime = refreshIntervalBackground;
+
+		// ZZzzzz
+		std::this_thread::sleep_for(sleepTime);
 	}
 
 #pragma region Cleanup

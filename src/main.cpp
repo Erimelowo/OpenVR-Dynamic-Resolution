@@ -38,21 +38,21 @@ static constexpr const std::chrono::milliseconds refreshIntervalBackground = 167
 static constexpr const std::chrono::milliseconds refreshIntervalFocused = 33ms;		// 30fps
 
 static constexpr const int mainWindowWidth = 350;
-static constexpr const int mainWindowHeight = 300;
+static constexpr const int mainWindowHeight = 304;
 
 static constexpr const float bitsToGB = 1073741824;
 
 #pragma region Config
 #pragma region Default settings
 // Initialization
-int autoStart = 1;
+bool autoStart = 1;
 int minimizeOnStart = 0;
 
 // Resolution
 float initialRes = 1.0f;
 float minRes = 0.75;
 float maxRes = 5.0f;
-long resChangeDelayMs = 1800;
+int resChangeDelayMs = 1800;
 float minCpuTimeThreshold = 1.0f;
 float resIncreaseMin = 0.03f;
 float resDecreaseMin = 0.09f;
@@ -61,14 +61,14 @@ float resDecreaseScale = 0.90;
 float resIncreaseThreshold = 0.80;
 float resDecreaseThreshold = 0.85f;
 int dataAverageSamples = 100;
-int resetOnThreshold = 1;
-int alwaysReproject = 0;
+bool resetOnThreshold = 1;
+bool alwaysReproject = 0;
 float vramTarget = 0.8;
 float vramLimit = 0.9;
-int vramMonitorEnabled = 1;
-int vramOnlyMode = 0;
-int preferReprojection = 0;
-int ignoreCpuTime = 0;
+bool vramMonitorEnabled = 1;
+bool vramOnlyMode = 0;
+bool preferReprojection = 0;
+bool ignoreCpuTime = 0;
 std::set<std::string> disabledApps = {"steam.app.620981"};
 #pragma endregion
 
@@ -113,7 +113,7 @@ bool loadSettings()
 	initialRes = std::stof(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes * 100.0f).c_str())) / 100.0f;
 	minRes = std::stof(ini.GetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
 	maxRes = std::stof(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
-	resChangeDelayMs = std::stol(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
+	resChangeDelayMs = std::stoi(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
 	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
 	resIncreaseMin = std::stof(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str())) / 100.0f;
 	resDecreaseMin = std::stof(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str())) / 100.0f;
@@ -212,6 +212,24 @@ long getCurrentTimeMillis()
 	return millis.count();
 }
 
+void pushGrayButtonColour() {
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.12, 0.12, 12));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.25, 0.25, 1));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.17, 0.17, 1));
+}
+
+void pushRedButtonColour() {
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.62, 0.12, 0.12, 12));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.73, 0.25, 0.25, 1));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.68, 0.17, 0.17, 1));
+}
+
+void pushGreenButtonColour() {
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.62, 0.12, 12));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.73, 0.25, 1));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.68, 0.17, 1));
+}
+
 /**
  * Returns the current VR application key (steam.app.000000)
  * or an empty string if no app is running.
@@ -299,9 +317,6 @@ int main(int argc, char *argv[])
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.12, 0.12, 12));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.25, 0.25, 1));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.17, 0.17, 1));
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -349,19 +364,12 @@ int main(int argc, char *argv[])
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
-
 	if (autoStartResult == 1)
-	{
 		printLine(window, "Enabled auto-start", 2800l);
-	}
 	else if (autoStartResult == 2)
-	{
 		printLine(window, "Disabled auto-start", 2800l);
-	}
 	else if (autoStartResult != 0)
-	{
 		printLine(window, fmt::format("Error toggling auto-start ({}) ", std::to_string(autoStartResult)), 6000l);
-	}
 
 	// Minimize or hide the window according to config
 	if (minimizeOnStart == 1) // Minimize
@@ -452,10 +460,11 @@ int main(int argc, char *argv[])
 
 	// Initialize loop variables
 	auto *frameTiming = new vr::Compositor_FrameTiming;
-	long lastChangeTime = getCurrentTimeMillis();
+	long lastChangeTime = 0;
 	bool adjustResolution = true;
 	bool openvrQuit = false;
 
+	// Resolution variables to display in GUI
 	float averageGpuTime = 0;
 	float averageCpuTime = 0;
 	int averageFrameShown = 0;
@@ -467,7 +476,9 @@ int main(int argc, char *argv[])
 	int currentFps = 0;
 	float vramUsedGB = 0;
 
+	// GUI variables
 	bool showSettings = false;
+	bool prevAutoStart = autoStart;
 
 	// event loop
 	while (!glfwWindowShouldClose(window) && !openvrQuit)
@@ -627,14 +638,23 @@ int main(int argc, char *argv[])
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		// Make sure buttons are gray
+		pushGrayButtonColour();
+
 #pragma region Main window
-		{
+		if (!showSettings) {
 			// Create the main window
 			ImGui::Begin("Main", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 			// Set position and size to fill the viewport
 			ImGui::SetWindowPos(ImVec2(0, 0));
 			ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
+
+			// Title
+			ImGui::Text("OVR Dynamic resolution");
+
+			ImGui::Separator();
+			ImGui::NewLine();
 
 			// HMD Hz
 			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({} ms)", std::to_string(int(hmdHz)), std::to_string(hmdFrametime).substr(0, 4)).c_str());
@@ -703,10 +723,106 @@ int main(int argc, char *argv[])
 
 			ImGui::NewLine();
 
-			showSettings = ImGui::Button("Settings", ImVec2(82, 28));
-			// TODO show settings panel
+			// Open settings
+			bool settingsPressed = ImGui::Button("Settings", ImVec2(82, 28));
+			if(settingsPressed) showSettings = true;
 
 			// Stop creating the main window
+			ImGui::End();
+		}
+#pragma endregion
+
+#pragma region Settings window
+		if (showSettings) {
+			// Create the settings window
+			ImGui::Begin("Settings", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+			// Set position and size to fill the viewport
+			ImGui::SetWindowPos(ImVec2(0, 0));
+			ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
+
+			// Set the labels' width
+			ImGui::PushItemWidth(96);
+
+			// Title
+			ImGui::Text("Settings");
+
+			ImGui::Separator();
+			ImGui::NewLine();
+
+			// Settings
+			ImGui::Checkbox("Start with SteamVR", &autoStart);
+			ImGui::SetItemTooltip("Enabling this launch OVRDR with SteamVR automatically.");
+			// Minimize on start TODO
+			//ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
+			ImGui::InputFloat("Initial resolution", &initialRes, 5); 
+			ImGui::SetItemTooltip("The resolution OVRDR will set your HMD's resolution to when starting. Also used when resetting resolution.");
+			ImGui::InputFloat("Minimum resolution", &minRes, 5);
+			ImGui::SetItemTooltip("The minimum value OVRDR will set your HMD's resolution to.");
+			ImGui::InputFloat("Maximum resolution", &maxRes, 5);
+			ImGui::SetItemTooltip("The maximum value OVRDR will set your HMD's resolution to.");
+			ImGui::InputInt("Resolution change delay", &resChangeDelayMs, 50);
+			ImGui::SetItemTooltip("The delay between each resolution change. Lowering it will make changing resolution more responsive, but may cause more frequent stutters.");
+			ImGui::InputFloat("Resolution increase minimum", &resIncreaseMin, 0.01);
+			ImGui::SetItemTooltip("How many static percentages to increase resolution when there's GPU and VRAM headroom.");
+			ImGui::InputFloat("Resolution decrease minimum", &resDecreaseMin, 0.01);
+			ImGui::SetItemTooltip("How many static percentages to decrease resolution when GPU frametime or VRAM usage is too high.");
+			ImGui::InputFloat("Resolution increase scale", &resIncreaseScale, 0.1);
+			ImGui::SetItemTooltip("How much to increase resolution depending on GPU frametime headroom.");
+			ImGui::InputFloat("Resolution decrease scale", &resDecreaseScale, 0.1);
+			ImGui::SetItemTooltip("How much to decrease resolution depending on GPU frametime excess.");
+			ImGui::InputFloat("Resolution increase threshold", &resIncreaseThreshold, 0.01);
+			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop increase resolution.");
+			ImGui::InputFloat("Resolution decrease threshold", &resDecreaseThreshold, 0.01);
+			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop decreasing resolution.");
+			ImGui::InputInt("Data average sample", &dataAverageSamples, 2);
+			ImGui::SetItemTooltip("Number of samples to use to average frametimes. One sample is received per frame.");
+			ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
+			ImGui::SetItemTooltip("Don't increase resolution when the CPU frametime is below this value.");
+			ImGui::Checkbox("Reset on threshold", &resetOnThreshold);
+			ImGui::SetItemTooltip("When enabled, will reset the resolution to the initial resolution whenever the minimum CPU time threshold is met.");
+			ImGui::Checkbox("Ignore CPU time", &ignoreCpuTime);
+			ImGui::SetItemTooltip("Enable to ignore CPU time during resolution adjustment.");
+			ImGui::Checkbox("Prefer reprojection", &preferReprojection);
+			ImGui::SetItemTooltip("Enable to double the target frametime when the CPU frametime is over the initial target frametime.");
+			ImGui::Checkbox("Always reproject", &alwaysReproject);
+			ImGui::SetItemTooltip("Enable this to always double the target frametime.");
+			ImGui::InputFloat("VRAM target", &vramTarget, 0.02);
+			ImGui::SetItemTooltip("The target VRAM usage. Once your VRAM usage exceeds this amount, the resolution will stop increasing.");
+			ImGui::InputFloat("VRAM limit", &vramLimit, 0.02);
+			ImGui::SetItemTooltip("The maximum VRAM usage. Once your VRAM usage exceeds this amount, the resolution will start decreasing.");
+			ImGui::Checkbox("VRAM monitor enabled", &vramMonitorEnabled);
+			ImGui::SetItemTooltip("If enabled, VRAM specific features will be enabled. Otherwise it is assumed that free VRAM is always available.");
+			ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
+			ImGui::SetItemTooltip("Enable to only adjust the resolution based off VRAM, ignoring GPU and CPU frametimes. Will always stay at the initial resolution or lower.");
+			//ImGui::InputText("Disabled apps", disabledApps); TODO
+			//ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
+
+			ImGui::NewLine();
+
+			// Save settings
+			bool closePressed = ImGui::Button("Close", ImVec2(82, 28));
+			if(closePressed) {
+				showSettings = false;
+			}
+			ImGui::SameLine();
+			pushRedButtonColour();
+			bool revertPressed = ImGui::Button("Revert", ImVec2(82, 28)); 
+			if(revertPressed) {
+				loadSettings();
+			}
+			ImGui::SameLine();
+			pushGreenButtonColour();
+			bool savePressed = ImGui::Button("Save", ImVec2(82, 28)); 
+			if(savePressed) {
+				saveSettings();
+				if (prevAutoStart != autoStart) {
+					handle_setup(autoStart);
+					prevAutoStart = autoStart;
+				}
+			}
+
+			// Stop creating the settings window
 			ImGui::End();
 		}
 #pragma endregion

@@ -2,7 +2,7 @@
 
 [![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
 
-![screenshot of the app](image.png)
+![screenshot of the app](screenshot.png)
 
 Lightweight OpenVR app to dynamically adjust your HMD's resolution depending on your GPU frametime, CPU frametime and VRAM.
 
@@ -33,15 +33,11 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `maxRes`: The maximum value the program will be allowed to set your HMD's resolution to.
 
-- `dataPullDelayMs`: The time in milliseconds (1000ms = 1s) the program waits to pull and display new information. Adjust dataAverageSamples accordingly.
-
 - `resChangeDelayMs`: The delay in milliseconds (1000ms = 1s) between each resolution change. Lowering it will make the resolution change more responsive, but will cause more stuttering from resolution changes.
 
-- `minCpuTimeThreshold`: Don't increase resolution when CPU time in milliseconds is below this value. Useful to avoid the resolution increasing in the SteamVR void or during loading screens. Also see resetOnThreshold.
+- `resIncreaseMin`: How many static % to increase resolution when we have GPU and VRAM headroom.
 
-- `resIncreaseMin`: How many static % to increase resolution when we have GPU or/and VRAM headroom.
-
-- `resDecreaseMin`: How many static % to decrease resolution when GPU frametime or/and VRAM usage is too high.
+- `resDecreaseMin`: How many static % to decrease resolution when GPU frametime or VRAM usage is too high.
 
 - `resIncreaseScale`: How much to increase resolution depending on GPU frametime headroom.
 
@@ -51,9 +47,15 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `resDecreaseThreshold`: Percentage of the target frametime at which the program will stop decreasing resolution
 
-- `dataAverageSamples`: Number of samples to use for the average GPU time. Depends on dataPullDelayMs.
+- `dataAverageSamples`: Number of samples to use for the average GPU time. One frame gives one sample.
+
+- `minCpuTimeThreshold`: Don't increase resolution when CPU time in milliseconds is below this value. Useful to avoid the resolution increasing in the SteamVR void or during loading screens. Also see resetOnThreshold.
 
 - `resetOnThreshold`: (0 = disabled, 1 = enabled) Enabling will reset the resolution to initialRes whenever minCpuTimeThreshold is met. Useful if you wanna go from playing a supported game to an unsuported games without having to reset your resolution/the program/SteamVR.
+
+- `ignoreCpuTime`: (0 = disabled, 1 = enabled) Don't use the CPU frametime to adjust resolution.
+
+- `preferReprojection`: (0 = disabled, 1 = enabled) If enabled, the GPU target frametime will double as soon as the CPU frametime is over the target frametime; else, the CPU frametime needs to be 2 times greater than the target frametime for the GPU target frametime to double.
 
 - `alwaysReproject`: (0 = disabled, 1 = enabled) Enabling will double the target frametime, so if you're at a target FPS of 120, it'll target 60. Useful if you have a bad CPU but good GPU.
 
@@ -64,10 +66,6 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 - `vramMonitorEnabled`: (0 = disabled, 1 = enabled) If enabled, vram specific features will be enabled, otherwise it is assumed that free vram is always available.
 
 - `vramOnlyMode`: (0 = disabled, 1 = enabled) Only adjust resolution based off VRAM; ignore GPU and CPU frametimes. Will always stay at initialRes or lower (if VRAM limit is reached).
-
-- `preferReprojection`: (0 = disabled, 1 = enabled) If enabled, the GPU target frametime will double as soon as the CPU frametime is over the target frametime; else, the CPU frametime needs to be 2 times greater than the target frametime for the GPU target frametime to double.
-
-- `ignoreCpuTime`: (0 = disabled, 1 = enabled) Don't use the CPU frametime to adjust resolution.
 
 - `disabledApps`: Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.
 

@@ -6,6 +6,7 @@
 #include <fmt/core.h>
 #include <args.hxx>
 #include <stdlib.h>
+#include <thread>
 
 // To include the nvml library at runtime
 #ifdef _WIN32
@@ -26,6 +27,9 @@
 
 // Loading png
 #include "lodepng.h"
+
+// Tray icon
+#include <tray.hpp>
 
 using namespace std::chrono_literals;
 using namespace vr;
@@ -212,19 +216,22 @@ long getCurrentTimeMillis()
 	return millis.count();
 }
 
-void pushGrayButtonColour() {
+void pushGrayButtonColour()
+{
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.12, 0.12, 12));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.25, 0.25, 1));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.17, 0.17, 1));
 }
 
-void pushRedButtonColour() {
+void pushRedButtonColour()
+{
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.62, 0.12, 0.12, 12));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.73, 0.25, 0.25, 1));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.68, 0.17, 0.17, 1));
 }
 
-void pushGreenButtonColour() {
+void pushGreenButtonColour()
+{
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12, 0.62, 0.12, 12));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25, 0.73, 0.25, 1));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.17, 0.68, 0.17, 1));
@@ -286,6 +293,38 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 	}
 }
 
+void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
+{
+	// OpenVR cleanup
+	vr::VR_Shutdown();
+
+	// NVML cleanup
+#ifdef _WIN32
+	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+	if (nvmlShutdownPtr)
+	{
+		nvmlShutdownPtr();
+	}
+	FreeLibrary(nvmlLibrary);
+#else
+	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+	if (nvmlShutdownPtr)
+	{
+		nvmlShutdownPtr();
+	}
+	dlclose(nvmlLibrary);
+#endif
+
+	// GUI cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
+	tray.exit();
+}
+
 int main(int argc, char *argv[])
 {
 #pragma region GUI init
@@ -332,10 +371,6 @@ int main(int argc, char *argv[])
 	icon.width = (int)iconWidth;
 	icon.height = (int)iconHeight;
 	glfwSetWindowIcon(window, 1, &icon);
-
-	// TODO Add tray icon
-	// https://github.com/Soundux/traypp
-
 #pragma endregion
 
 #pragma region VR init check
@@ -457,6 +492,21 @@ int main(int argc, char *argv[])
 		nvmlEnabled = false;
 	}
 #pragma endregion
+
+	// Add tray icon
+	Tray::Tray tray("OVRDR", "icon.ico");
+
+	// Construct menu
+	tray.addEntries(Tray::Button("Open", [&]
+								 { glfwShowWindow(window); }),
+					Tray::Button("Hide", [&]
+								 { glfwHideWindow(window); }),
+					Tray::Separator(),
+					Tray::Button("Exit", [&]
+								 { cleanup(window, nvmlLibrary, tray); return 0; }));
+
+	// Run in a thread
+	std::thread trayThread(&Tray::Tray::run, &tray);
 
 	// Initialize loop variables
 	auto *frameTiming = new vr::Compositor_FrameTiming;
@@ -642,7 +692,8 @@ int main(int argc, char *argv[])
 		pushGrayButtonColour();
 
 #pragma region Main window
-		if (!showSettings) {
+		if (!showSettings)
+		{
 			// Create the main window
 			ImGui::Begin("Main", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
@@ -725,7 +776,8 @@ int main(int argc, char *argv[])
 
 			// Open settings
 			bool settingsPressed = ImGui::Button("Settings", ImVec2(82, 28));
-			if(settingsPressed) showSettings = true;
+			if (settingsPressed)
+				showSettings = true;
 
 			// Stop creating the main window
 			ImGui::End();
@@ -733,7 +785,8 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 #pragma region Settings window
-		if (showSettings) {
+		if (showSettings)
+		{
 			// Create the settings window
 			ImGui::Begin("Settings", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
@@ -754,8 +807,8 @@ int main(int argc, char *argv[])
 			ImGui::Checkbox("Start with SteamVR", &autoStart);
 			ImGui::SetItemTooltip("Enabling this launch OVRDR with SteamVR automatically.");
 			// Minimize on start TODO
-			//ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
-			ImGui::InputFloat("Initial resolution", &initialRes, 5); 
+			// ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
+			ImGui::InputFloat("Initial resolution", &initialRes, 5);
 			ImGui::SetItemTooltip("The resolution OVRDR will set your HMD's resolution to when starting. Also used when resetting resolution.");
 			ImGui::InputFloat("Minimum resolution", &minRes, 5);
 			ImGui::SetItemTooltip("The minimum value OVRDR will set your HMD's resolution to.");
@@ -795,28 +848,32 @@ int main(int argc, char *argv[])
 			ImGui::SetItemTooltip("If enabled, VRAM specific features will be enabled. Otherwise it is assumed that free VRAM is always available.");
 			ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
 			ImGui::SetItemTooltip("Enable to only adjust the resolution based off VRAM, ignoring GPU and CPU frametimes. Will always stay at the initial resolution or lower.");
-			//ImGui::InputText("Disabled apps", disabledApps); TODO
-			//ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
+			// ImGui::InputText("Disabled apps", disabledApps); TODO
+			// ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
 
 			ImGui::NewLine();
 
 			// Save settings
 			bool closePressed = ImGui::Button("Close", ImVec2(82, 28));
-			if(closePressed) {
+			if (closePressed)
+			{
 				showSettings = false;
 			}
 			ImGui::SameLine();
 			pushRedButtonColour();
-			bool revertPressed = ImGui::Button("Revert", ImVec2(82, 28)); 
-			if(revertPressed) {
+			bool revertPressed = ImGui::Button("Revert", ImVec2(82, 28));
+			if (revertPressed)
+			{
 				loadSettings();
 			}
 			ImGui::SameLine();
 			pushGreenButtonColour();
-			bool savePressed = ImGui::Button("Save", ImVec2(82, 28)); 
-			if(savePressed) {
+			bool savePressed = ImGui::Button("Save", ImVec2(82, 28));
+			if (savePressed)
+			{
 				saveSettings();
-				if (prevAutoStart != autoStart) {
+				if (prevAutoStart != autoStart)
+				{
 					handle_setup(autoStart);
 					prevAutoStart = autoStart;
 				}
@@ -850,42 +907,14 @@ int main(int argc, char *argv[])
 		std::chrono::milliseconds sleepTime;
 		if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
 			sleepTime = refreshIntervalFocused;
-		else 
+		else
 			sleepTime = refreshIntervalBackground;
 
 		// ZZzzzz
 		std::this_thread::sleep_for(sleepTime);
 	}
 
-#pragma region Cleanup
-	// OpenVR cleanup
-	vr::VR_Shutdown();
-
-	// NVML cleanup
-#ifdef _WIN32
-	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
-	if (nvmlShutdownPtr)
-	{
-		nvmlShutdownPtr();
-	}
-	FreeLibrary(nvmlLibrary);
-#else
-	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
-	if (nvmlShutdownPtr)
-	{
-		nvmlShutdownPtr();
-	}
-	dlclose(nvmlLibrary);
-#endif
-
-	// GUI cleanup
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-	glfwDestroyWindow(window);
-	glfwTerminate();
-
-#pragma endregion
+	cleanup(window, nvmlLibrary, tray);
 
 	return 0;
 }

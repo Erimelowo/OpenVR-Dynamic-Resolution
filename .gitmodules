@@ -1,3 +1,6 @@
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg.git
+[submodule "traypp"]
+	path = traypp
+	url = https://github.com/Soundux/traypp.git

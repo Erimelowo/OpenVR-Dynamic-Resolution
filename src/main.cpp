@@ -10,6 +10,7 @@
 
 // To include the nvml library at runtime
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #else
 #include <dlfcn.h>
@@ -571,12 +572,12 @@ int main(int argc, char *argv[])
 								+ (frameTiming->m_flNewFrameReadyMs - frameTiming->m_flNewPosesReadyMs); // Application & Late Start
 
 				// How many times the current frame repeated (>1 = reprojecting)
-				uint32_t frameShown = frameTiming->m_nNumFramePresents;
+				int frameShown = frameTiming->m_nNumFramePresents;
 				// Reason reprojection is happening
-				uint32_t reprojectionFlag = frameTiming->m_nReprojectionFlags;
+				int reprojectionFlag = frameTiming->m_nReprojectionFlags;
 
 				// Calculate the adjusted CPU time off reprojection.
-				cpuTime *= min(frameShown, floor(gpuTime / targetFrametime) + 1);
+				cpuTime *= std::min(frameShown, (int)(gpuTime / targetFrametime) + 1);
 
 				// Add to totals
 				totalGpuTime += gpuTime;
@@ -590,7 +591,7 @@ int main(int argc, char *argv[])
 			averageFrameShown = frameShownTotal / dataAverageSamples;
 
 			// Estimated current FPS
-			currentFps = targetFps / averageFrameShown;
+			currentFps = targetFps / std::max(averageFrameShown, 1);
 			if (averageCpuTime > targetFrametime)
 				currentFps /= fmod(averageCpuTime, targetFrametime) / targetFrametime + 1;
 
@@ -654,7 +655,7 @@ int main(int argc, char *argv[])
 					else if (vramOnlyMode && newRes < initialRes && vramUsed < vramTarget)
 					{
 						// When in VRAM-only mode, make sure the res goes back up when possible.
-						newRes = min(initialRes, newRes + resIncreaseMin);
+						newRes = std::min(initialRes, newRes + resIncreaseMin);
 					}
 
 					// Clamp the new resolution

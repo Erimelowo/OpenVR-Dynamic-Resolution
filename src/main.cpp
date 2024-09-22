@@ -57,22 +57,22 @@ float initialRes = 1.0f;
 float minRes = 0.75;
 float maxRes = 5.0f;
 int resChangeDelayMs = 1800;
-float minCpuTimeThreshold = 1.0f;
+int dataAverageSamples = 100;
 float resIncreaseMin = 0.03f;
 float resDecreaseMin = 0.09f;
 float resIncreaseScale = 0.60f;
 float resDecreaseScale = 0.90;
 float resIncreaseThreshold = 0.80;
 float resDecreaseThreshold = 0.85f;
-int dataAverageSamples = 100;
-bool resetOnThreshold = 1;
-bool alwaysReproject = 0;
+float minCpuTimeThreshold = 1.0f;
+bool resetOnThreshold = true;
+bool ignoreCpuTime = false;
+bool preferReprojection = false;
+bool alwaysReproject = false;
 float vramTarget = 0.8;
 float vramLimit = 0.9;
-bool vramMonitorEnabled = 1;
-bool vramOnlyMode = 0;
-bool preferReprojection = 0;
-bool ignoreCpuTime = 0;
+bool vramMonitorEnabled = true;
+bool vramOnlyMode = false;
 std::set<std::string> disabledApps = {"steam.app.620981"};
 #pragma endregion
 
@@ -118,24 +118,24 @@ bool loadSettings()
 	minRes = std::stof(ini.GetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str())) / 100.0f;
 	maxRes = std::stof(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str())) / 100.0f;
 	resChangeDelayMs = std::stoi(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
-	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
+	dataAverageSamples = std::stoi(ini.GetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+	if (dataAverageSamples > 128)
+		dataAverageSamples = 128; // Max stored by OpenVR
 	resIncreaseMin = std::stof(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str())) / 100.0f;
 	resDecreaseMin = std::stof(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str())) / 100.0f;
 	resIncreaseScale = std::stof(ini.GetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale * 100.0f).c_str())) / 100.0f;
 	resDecreaseScale = std::stof(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale * 100.0f).c_str())) / 100.0f;
 	resIncreaseThreshold = std::stof(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str())) / 100.0f;
 	resDecreaseThreshold = std::stof(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str())) / 100.0f;
-	dataAverageSamples = std::stoi(ini.GetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
-	if (dataAverageSamples > 128)
-		dataAverageSamples = 128; // Max stored by OpenVR
+	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
 	resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
+	ignoreCpuTime = std::stoi(ini.GetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
+	preferReprojection = std::stoi(ini.GetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str()));
 	alwaysReproject = std::stoi(ini.GetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
-	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
 	vramTarget = std::stoi(ini.GetValue("Resolution", "vramTarget", std::to_string(vramTarget * 100.0f).c_str())) / 100.0f;
+	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str())) / 100.0f;
 	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
 	vramOnlyMode = std::stoi(ini.GetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
-	preferReprojection = std::stoi(ini.GetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str()));
-	ignoreCpuTime = std::stoi(ini.GetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
 	disabledApps = splitConfigValue(ini.GetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str()));
 
 	return true;
@@ -154,22 +154,22 @@ void saveSettings()
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes * 100.0f).c_str());
 	ini.SetValue("Resolution", "maxRes", std::to_string(maxRes * 100.0f).c_str());
 	ini.SetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
-	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
+	ini.SetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
 	ini.SetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin * 100.0f).c_str());
 	ini.SetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin * 100.0f).c_str());
 	ini.SetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale * 100.0f).c_str());
 	ini.SetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale * 100.0f).c_str());
 	ini.SetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold * 100.0f).c_str());
 	ini.SetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold * 100.0f).c_str());
-	ini.SetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
 	ini.SetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str());
+	ini.SetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str());
+	ini.SetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str());
 	ini.SetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str());
-	ini.SetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str());
 	ini.SetValue("Resolution", "vramTarget", std::to_string(vramTarget * 100.0f).c_str());
+	ini.SetValue("Resolution", "vramLimit", std::to_string(vramLimit * 100.0f).c_str());
 	ini.SetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str());
 	ini.SetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
-	ini.SetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str());
-	ini.SetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str());
 	ini.SetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str());
 
 	// Save changes to disk

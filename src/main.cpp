@@ -58,7 +58,7 @@ int initialRes = 100;
 int minRes = 75;
 int maxRes = 350;
 int resChangeDelayMs = 1800;
-int dataAverageSamples = 100;
+int dataAverageSamples = 128;
 int resIncreaseMin = 3;
 int resDecreaseMin = 9;
 int resIncreaseScale = 60;
@@ -515,6 +515,7 @@ int main(int argc, char *argv[])
 	std::thread trayThread(&Tray::Tray::run, &tray);
 
 	// Initialize loop variables
+	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
 	long lastChangeTime = 0;
 	bool adjustResolution = true;
 	bool openvrQuit = false;
@@ -561,7 +562,6 @@ int main(int argc, char *argv[])
 			int frameShownTotal = 0;
 
 			// Loop through past frames
-			Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
 			frameTiming->m_nSize = sizeof(Compositor_FrameTiming);
 			vr::VRCompositor()->GetFrameTimings(frameTiming, dataAverageSamples);
 			for (int i = 0; i < dataAverageSamples; i++)
@@ -815,21 +815,26 @@ int main(int argc, char *argv[])
 			// Minimize on start TODO
 			// ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
 			
-			ImGui::InputInt("Initial resolution", &initialRes,  5);
+			if (ImGui::InputInt("Initial resolution", &initialRes,  5))
+				initialRes = std::clamp(initialRes, 20, 500);
 			ImGui::SetItemTooltip("The resolution OVRDR will set your HMD's resolution to when starting. Also used when resetting resolution.");
 			
-			ImGui::InputInt("Minimum resolution", &minRes,  5);
+			if (ImGui::InputInt("Minimum resolution", &minRes,  5))
+				minRes = std::clamp(minRes, 20, 500);
 			ImGui::SetItemTooltip("The minimum value OVRDR will set your HMD's resolution to.");
 			
-			ImGui::InputInt("Maximum resolution", &maxRes, 5);
+			if (ImGui::InputInt("Maximum resolution", &maxRes, 5))
+				maxRes = std::clamp(maxRes, 20, 500);
 			ImGui::SetItemTooltip("The maximum value OVRDR will set your HMD's resolution to.");
 			
-			ImGui::InputInt("Resolution change delay (ms)", &resChangeDelayMs, 50);
+			if (ImGui::InputInt("Resolution change delay (ms)", &resChangeDelayMs, 50))
+				resChangeDelayMs = std::max(resChangeDelayMs, 10);
 			ImGui::SetItemTooltip("The delay between each resolution change. Lowering it will make changing resolution more responsive, but may cause more frequent stutters.");
-			
-			// std::clamp()
-			ImGui::InputInt("Data average samples", &dataAverageSamples, 2);
-			if (dataAverageSamples > 128) dataAverageSamples = 128; // Max stored by OpenVR
+
+			if (ImGui::InputInt("Data average samples", &dataAverageSamples, 2)) {
+				dataAverageSamples = std::clamp(dataAverageSamples, 1, 128); // Max stored by OpenVR
+				frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
+			}
 			ImGui::SetItemTooltip("Number of samples to use to average frametimes. One sample is received per frame.");
 			
 			ImGui::InputInt("Resolution increase minimum", &resIncreaseMin, 1);
@@ -844,12 +849,14 @@ int main(int argc, char *argv[])
 			ImGui::InputInt("Resolution decrease scale", &resDecreaseScale, 10);
 			ImGui::SetItemTooltip("How much to decrease resolution depending on GPU frametime excess.");
 			
-			ImGui::InputInt("Resolution increase threshold", &resIncreaseThreshold, 1);
+			if (ImGui::InputInt("Resolution increase threshold", &resIncreaseThreshold, 1))
+				resIncreaseThreshold = std::clamp(resIncreaseThreshold, 0, 100);
 			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop increase resolution.");
 			
-			ImGui::InputInt("Resolution decrease threshold", &resDecreaseThreshold, 1);
+			if (ImGui::InputInt("Resolution decrease threshold", &resDecreaseThreshold, 1))
+				resDecreaseThreshold = std::clamp(resDecreaseThreshold, 0, 100);
 			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop decreasing resolution.");
-			
+
 			ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
 			ImGui::SetItemTooltip("Don't increase resolution when the CPU frametime is below this value.");
 			
@@ -865,10 +872,12 @@ int main(int argc, char *argv[])
 			ImGui::Checkbox("Always reproject", &alwaysReproject);
 			ImGui::SetItemTooltip("Enable this to always double the target frametime.");
 			
-			ImGui::InputInt("VRAM target", &vramTarget, 2);
+			if (ImGui::InputInt("VRAM target", &vramTarget, 2))
+				vramTarget = std::clamp(vramTarget, 0, 100);
 			ImGui::SetItemTooltip("The target VRAM usage. Once your VRAM usage exceeds this amount, the resolution will stop increasing.");
 			
-			ImGui::InputInt("VRAM limit", &vramLimit, 2);
+			if (ImGui::InputInt("VRAM limit", &vramLimit, 2))
+				vramLimit = std::clamp(vramLimit, 0, 100);
 			ImGui::SetItemTooltip("The maximum VRAM usage. Once your VRAM usage exceeds this amount, the resolution will start decreasing.");
 			
 			ImGui::Checkbox("VRAM monitor enabled", &vramMonitorEnabled);

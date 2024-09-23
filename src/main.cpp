@@ -60,12 +60,12 @@ int maxRes = 350;
 int resChangeDelayMs = 1800;
 int dataAverageSamples = 128;
 int resIncreaseMin = 3;
-int resDecreaseMin = 9;
+int resDecreaseMin = 8;
 int resIncreaseScale = 60;
 int resDecreaseScale = 90;
 int resIncreaseThreshold = 80;
-int resDecreaseThreshold = 85;
-float minCpuTimeThreshold = 1.0f;
+int resDecreaseThreshold = 88;
+float minCpuTimeThreshold = 0.6f;
 bool resetOnThreshold = true;
 bool ignoreCpuTime = false;
 bool preferReprojection = false;
@@ -74,7 +74,7 @@ int vramTarget = 80;
 int vramLimit = 90;
 bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
-std::set<std::string> disabledApps = {"steam.app.620981"};
+std::set<std::string> disabledApps = {"steam.app.620980"};
 #pragma endregion
 
 std::set<std::string> splitConfigValue(const std::string &val)
@@ -424,7 +424,6 @@ int main(int argc, char *argv[])
 #pragma region Initialise NVML
 	HMODULE nvmlLibrary;
 	nvmlDevice_t nvmlDevice;
-	nvmlMemory_t nvmlMemory;
 	float vramTotalGB;
 
 	if (vramMonitorEnabled)
@@ -476,20 +475,6 @@ int main(int argc, char *argv[])
 					if (nvmlShutdownPtr)
 						nvmlShutdownPtr();
 				}
-				else
-				{
-					// Get memory info
-					nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
-#ifdef _WIN32
-					nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#else	
-					nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#endif	
-					if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
-						nvmlEnabled = false;
-					else
-						vramTotalGB = nvmlMemory.total / bitsToGB;
-				}
 			}
 		}
 	}
@@ -523,7 +508,7 @@ int main(int argc, char *argv[])
 	// Resolution variables to display in GUI
 	float averageGpuTime = 0;
 	float averageCpuTime = 0;
-	int averageFrameShown = 0;
+	float averageFrameShown = 0;
 	int newRes = 0;
 	int targetFps = 0;
 	float targetFrametime = 0;
@@ -575,12 +560,9 @@ int main(int argc, char *argv[])
 								+ (frameTiming[i].m_flNewFrameReadyMs - frameTiming[i].m_flNewPosesReadyMs); // Application & Late Start
 
 				// How many times the current frame repeated (>1 = reprojecting)
-				int frameShown = frameTiming[i].m_nNumFramePresents;
+				int frameShown = std::max((int)frameTiming[i].m_nNumFramePresents, 1);
 				// Reason reprojection is happening
 				int reprojectionFlag = frameTiming[i].m_nReprojectionFlags;
-
-				// Calculate the adjusted CPU time off reprojection.
-				cpuTime *= std::min(frameShown, (int)(gpuTime / targetFrametime) + 1);
 
 				// Add to totals
 				totalGpuTime += gpuTime;
@@ -591,12 +573,10 @@ int main(int argc, char *argv[])
 			// Calculate averages
 			averageGpuTime = totalGpuTime / dataAverageSamples;
 			averageCpuTime = totalCpuTime / dataAverageSamples;
-			averageFrameShown = std::round((float)frameShownTotal / (float)dataAverageSamples);
+			averageFrameShown = (float)frameShownTotal / (float)dataAverageSamples;
 
 			// Estimated current FPS
-			currentFps = targetFps / std::max(averageFrameShown, 1);
-			if (averageCpuTime > targetFrametime)
-				currentFps /= fmod(averageCpuTime, targetFrametime) / targetFrametime + 1;
+			currentFps = targetFps / averageFrameShown;
 
 			// Double the target frametime if the user wants to,
 			// or if CPU Frametime is double the target frametime,
@@ -610,12 +590,27 @@ int main(int argc, char *argv[])
 			}
 
 			// Get VRAM usage
-			vramUsedGB = nvmlMemory.used / bitsToGB;
-			float vramUsed;
-			if (nvmlEnabled) // Get the VRAM used in %
-				vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
-			else // Assume we always have free VRAM
-				vramUsed = 0;
+			float vramUsed = 0; // Assume we always have free VRAM by default
+			if (nvmlEnabled) {
+				// Get memory info
+				nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
+#ifdef _WIN32
+				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#else	
+				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#endif	
+				nvmlMemory_t nvmlMemory;
+				if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
+					nvmlEnabled = false;
+				else
+					vramTotalGB = nvmlMemory.total / bitsToGB;
+
+				vramUsedGB = nvmlMemory.used / bitsToGB;
+				if (nvmlEnabled) // Get the VRAM used in %
+					vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
+			}
+
+
 
 			// Check if the SteamVR dashboard is open
 			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
@@ -750,21 +745,8 @@ int main(int argc, char *argv[])
 
 			ImGui::NewLine();
 
-			// Reprojecting status
-			if (averageFrameShown > 1)
-			{
-				std::string reason;
-				if (averageGpuTime > averageCpuTime)
-					reason = "GPU";
-				else
-					reason = "CPU";
-
-				ImGui::Text(fmt::format("Reprojecting: Yes ({}x, {})", averageFrameShown, reason).c_str());
-			}
-			else
-			{
-				ImGui::Text("Reprojecting: No");
-			}
+			// Reprojection ratio
+			ImGui::Text(fmt::format("Reprojection ratio: {}", std::to_string(averageFrameShown - 1).substr(0, 4)).c_str());
 
 			// Current resolution
 			ImGui::Text(fmt::format("Resolution = {}", std::to_string(newRes)).c_str());

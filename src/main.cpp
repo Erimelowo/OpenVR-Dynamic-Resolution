@@ -437,54 +437,59 @@ int main(int argc, char *argv[])
 		void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 		nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
 #endif
-		if (!nvmlInitPtr)
+		if (!nvmlInitPtr) 
+		{
 			nvmlEnabled = false;
-
-		if (nvmlEnabled)
+		}
+		else
 		{
 			nvmlReturn_t result;
 			// Initialize NVML library
 			result = nvmlInitPtr();
 			if (result != NVML_SUCCESS)
-				nvmlEnabled = false;
-
-			// Get device handle
-			nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
-#ifdef _WIN32
-			nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
-#else
-			nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
-#endif
-			if (!nvmlDeviceGetHandleByIndexPtr)
-				nvmlEnabled = false;
-			else
-				result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
-
-			if (result != NVML_SUCCESS || !nvmlEnabled)
 			{
-				// Shutdown NVML
-				nvmlShutdown_t nvmlShutdownPtr;
-#ifdef _WIN32
-				nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
-#else
-				nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
-#endif
-				if (nvmlShutdownPtr)
-					nvmlShutdownPtr();
+				nvmlEnabled = false;
 			}
-			else
+			else 
 			{
-				// Get memory info
-				nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
+				// Get device handle
+				nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
 #ifdef _WIN32
-				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#else
-				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#endif
-				if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
+				nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+#else	
+				nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
+#endif	
+				if (!nvmlDeviceGetHandleByIndexPtr)
 					nvmlEnabled = false;
 				else
-					vramTotalGB = nvmlMemory.total / bitsToGB;
+					result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
+
+				if (result != NVML_SUCCESS || !nvmlEnabled)
+				{
+					// Shutdown NVML
+					nvmlShutdown_t nvmlShutdownPtr;
+#ifdef _WIN32
+					nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
+#else	
+					nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+#endif	
+					if (nvmlShutdownPtr)
+						nvmlShutdownPtr();
+				}
+				else
+				{
+					// Get memory info
+					nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
+#ifdef _WIN32
+					nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#else	
+					nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
+#endif	
+					if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
+						nvmlEnabled = false;
+					else
+						vramTotalGB = nvmlMemory.total / bitsToGB;
+				}
 			}
 		}
 	}
@@ -597,8 +602,7 @@ int main(int argc, char *argv[])
 			// or if CPU Frametime is double the target frametime,
 			// or if preferReprojection is true and CPU Frametime is greated than targetFrametime.
 			if ((((averageCpuTime > targetFrametime && preferReprojection) ||
-				  averageCpuTime / 2 > targetFrametime) &&
-				 !ignoreCpuTime) ||
+				  averageCpuTime / 2 > targetFrametime) && !ignoreCpuTime) ||
 				alwaysReproject)
 			{
 				targetFps /= 2;
@@ -629,18 +633,18 @@ int main(int argc, char *argv[])
 				if ((averageCpuTime > minCpuTimeThreshold || vramOnlyMode))
 				{
 					// Frametime
-					if (averageGpuTime < targetFrametime * resIncreaseThreshold / 100.0f && vramUsed < vramTarget / 100.0f && !vramOnlyMode)
+					if (averageGpuTime < targetFrametime * (resIncreaseThreshold / 100.0f) && vramUsed < vramTarget / 100.0f && !vramOnlyMode)
 					{
 						// Increase resolution
-						newRes += ((((targetFrametime * resIncreaseThreshold / 100.0f) - averageGpuTime) / targetFrametime) *
+						newRes += ((((targetFrametime * (resIncreaseThreshold / 100.0f)) - averageGpuTime) / targetFrametime) *
 								   (resIncreaseScale / 100.0f)) +
 								  resIncreaseMin;
 					}
-					else if (averageGpuTime > targetFrametime * resDecreaseThreshold / 100.0f && !vramOnlyMode)
+					else if (averageGpuTime > targetFrametime * (resDecreaseThreshold / 100.0f) && !vramOnlyMode)
 					{
 						// Decrease resolution
-						newRes -= (((averageGpuTime - (targetFrametime * resDecreaseThreshold / 100.0f)) / targetFrametime) *
-								   resDecreaseScale / 100.0f) +
+						newRes -= (((averageGpuTime - (targetFrametime * (resDecreaseThreshold / 100.0f))) / targetFrametime) *
+								   (resDecreaseScale / 100.0f)) +
 								  resDecreaseMin;
 					}
 
@@ -659,7 +663,7 @@ int main(int argc, char *argv[])
 					// Clamp the new resolution
 					newRes = std::clamp(newRes, minRes, maxRes);
 				}
-				else if (resetOnThreshold && lastRes != initialRes && averageCpuTime < minCpuTimeThreshold && !vramOnlyMode)
+				else if (resetOnThreshold && averageCpuTime < minCpuTimeThreshold && !vramOnlyMode)
 				{
 					// Reset to initialRes because CPU time fell below the threshold
 					newRes = initialRes;
@@ -805,49 +809,74 @@ int main(int argc, char *argv[])
 			// Settings
 			ImGui::Checkbox("Start with SteamVR", &autoStart);
 			ImGui::SetItemTooltip("Enabling this launch OVRDR with SteamVR automatically.");
+
+			// todo fix tooltips going out of bound
+
 			// Minimize on start TODO
 			// ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
+			
 			ImGui::InputInt("Initial resolution", &initialRes,  5);
 			ImGui::SetItemTooltip("The resolution OVRDR will set your HMD's resolution to when starting. Also used when resetting resolution.");
+			
 			ImGui::InputInt("Minimum resolution", &minRes,  5);
 			ImGui::SetItemTooltip("The minimum value OVRDR will set your HMD's resolution to.");
+			
 			ImGui::InputInt("Maximum resolution", &maxRes, 5);
 			ImGui::SetItemTooltip("The maximum value OVRDR will set your HMD's resolution to.");
+			
 			ImGui::InputInt("Resolution change delay (ms)", &resChangeDelayMs, 50);
 			ImGui::SetItemTooltip("The delay between each resolution change. Lowering it will make changing resolution more responsive, but may cause more frequent stutters.");
+			
+			// std::clamp()
 			ImGui::InputInt("Data average samples", &dataAverageSamples, 2);
 			if (dataAverageSamples > 128) dataAverageSamples = 128; // Max stored by OpenVR
 			ImGui::SetItemTooltip("Number of samples to use to average frametimes. One sample is received per frame.");
+			
 			ImGui::InputInt("Resolution increase minimum", &resIncreaseMin, 1);
 			ImGui::SetItemTooltip("How many static percentages to increase resolution when there's GPU and VRAM headroom.");
+			
 			ImGui::InputInt("Resolution decrease minimum", &resDecreaseMin, 1);
 			ImGui::SetItemTooltip("How many static percentages to decrease resolution when GPU frametime or VRAM usage is too high.");
+			
 			ImGui::InputInt("Resolution increase scale", &resIncreaseScale, 10);
 			ImGui::SetItemTooltip("How much to increase resolution depending on GPU frametime headroom.");
+			
 			ImGui::InputInt("Resolution decrease scale", &resDecreaseScale, 10);
 			ImGui::SetItemTooltip("How much to decrease resolution depending on GPU frametime excess.");
+			
 			ImGui::InputInt("Resolution increase threshold", &resIncreaseThreshold, 1);
 			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop increase resolution.");
+			
 			ImGui::InputInt("Resolution decrease threshold", &resDecreaseThreshold, 1);
 			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop decreasing resolution.");
+			
 			ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
 			ImGui::SetItemTooltip("Don't increase resolution when the CPU frametime is below this value.");
+			
 			ImGui::Checkbox("Reset on threshold", &resetOnThreshold);
 			ImGui::SetItemTooltip("When enabled, will reset the resolution to the initial resolution whenever the minimum CPU time threshold is met.");
+			
 			ImGui::Checkbox("Ignore CPU time", &ignoreCpuTime);
 			ImGui::SetItemTooltip("Enable to ignore CPU time during resolution adjustment.");
+			
 			ImGui::Checkbox("Prefer reprojection", &preferReprojection);
 			ImGui::SetItemTooltip("Enable to double the target frametime when the CPU frametime is over the initial target frametime.");
+			
 			ImGui::Checkbox("Always reproject", &alwaysReproject);
 			ImGui::SetItemTooltip("Enable this to always double the target frametime.");
+			
 			ImGui::InputInt("VRAM target", &vramTarget, 2);
 			ImGui::SetItemTooltip("The target VRAM usage. Once your VRAM usage exceeds this amount, the resolution will stop increasing.");
+			
 			ImGui::InputInt("VRAM limit", &vramLimit, 2);
 			ImGui::SetItemTooltip("The maximum VRAM usage. Once your VRAM usage exceeds this amount, the resolution will start decreasing.");
+			
 			ImGui::Checkbox("VRAM monitor enabled", &vramMonitorEnabled);
 			ImGui::SetItemTooltip("If enabled, VRAM specific features will be enabled. Otherwise it is assumed that free VRAM is always available.");
+			
 			ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
 			ImGui::SetItemTooltip("Enable to only adjust the resolution based off VRAM, ignoring GPU and CPU frametimes. Will always stay at the initial resolution or lower.");
+			
 			// ImGui::InputText("Disabled apps", disabledApps); TODO
 			// ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
 

@@ -26,6 +26,17 @@
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#pragma region Modifiy InputText so we can use std::string
+namespace ImGui
+{
+    // ImGui::InputText() with std::string
+    // Because text input needs dynamic resizing, we need to setup a callback to grow the capacity
+    IMGUI_API bool  InputText(const char* label, std::string* str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
+    IMGUI_API bool  InputTextMultiline(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
+    IMGUI_API bool  InputTextWithHint(const char* label, const char* hint, std::string* str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
+}
+#pragma endregion
+
 // Loading png
 #include "lodepng.h"
 
@@ -74,7 +85,8 @@ int vramTarget = 80;
 int vramLimit = 90;
 bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
-std::set<std::string> disabledApps = {"steam.app.620980"};
+std::string disabledApps = "steam.app.620980";
+std::set<std::string> disabledAppsSet;
 #pragma endregion
 
 std::set<std::string> splitConfigValue(const std::string &val)
@@ -89,18 +101,6 @@ std::set<std::string> splitConfigValue(const std::string &val)
 	}
 
 	return set;
-}
-
-const std::string mergeConfigValue(std::set<std::string> &valSet)
-{
-	std::string result = "";
-
-	for (std::string val : valSet)
-	{
-		result += (val + " ");
-	}
-
-	return result;
 }
 
 bool loadSettings()
@@ -137,7 +137,8 @@ bool loadSettings()
 	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit).c_str()));
 	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
 	vramOnlyMode = std::stoi(ini.GetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
-	disabledApps = splitConfigValue(ini.GetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str()));
+	disabledApps = ini.GetValue("Resolution", "disabledApps", disabledApps.c_str());
+	disabledAppsSet = splitConfigValue(disabledApps);
 
 	return true;
 }
@@ -171,7 +172,7 @@ void saveSettings()
 	ini.SetValue("Resolution", "vramLimit", std::to_string(vramLimit).c_str());
 	ini.SetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str());
 	ini.SetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
-	ini.SetValue("Resolution", "disabledApps", mergeConfigValue(disabledApps).c_str());
+	ini.SetValue("Resolution", "disabledApps", disabledApps.c_str());
 
 	// Save changes to disk
 	ini.SaveFile("settings.ini");
@@ -616,7 +617,7 @@ int main(int argc, char *argv[])
 			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
 			// Check that we're in a supported application
 			std::string appKey = getCurrentApplicationKey();
-			bool isCurrentAppDisabled = disabledApps.find(appKey) != disabledApps.end() || appKey == "";
+			bool isCurrentAppDisabled = disabledAppsSet.find(appKey) != disabledAppsSet.end() || appKey == "";
 #pragma endregion
 
 #pragma region Resolution adjustment
@@ -794,8 +795,13 @@ int main(int argc, char *argv[])
 
 			// todo fix tooltips going out of bound
 
-			// Minimize on start TODO
-			// ImGui::SetItemTooltip("Will automatically minimize or hide the window on launch. If set to 2 (hide), you won't be able to exit the program manually, but it will automatically exit with SteamVR.");
+			ImGui::Text("Startup behaviour");
+			ImGui::RadioButton("Visible", &minimizeOnStart, 0);
+			ImGui::SetItemTooltip("Window is visible on startup.");
+			ImGui::RadioButton("Minimized", &minimizeOnStart, 1);
+			ImGui::SetItemTooltip("Minimize the window to the taskbar on startup.");
+			ImGui::RadioButton("Hidden (tray)", &minimizeOnStart, 2);
+			ImGui::SetItemTooltip("Hides the window completely on startup.");
 			
 			if (ImGui::InputInt("Initial resolution", &initialRes,  5))
 				initialRes = std::clamp(initialRes, 20, 500);
@@ -868,8 +874,9 @@ int main(int argc, char *argv[])
 			ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
 			ImGui::SetItemTooltip("Enable to only adjust the resolution based off VRAM, ignoring GPU and CPU frametimes. Will always stay at the initial resolution or lower.");
 			
-			// ImGui::InputText("Disabled apps", disabledApps); TODO
-			// ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
+			if (ImGui::InputText("Disabled apps", &disabledApps))
+				disabledAppsSet = splitConfigValue(disabledApps); // TODO test
+			ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
 
 			ImGui::NewLine();
 

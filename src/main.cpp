@@ -64,18 +64,18 @@ static constexpr const float bitsToGB = 1073741824;
 bool autoStart = 1;
 int minimizeOnStart = 0;
 // General
-int resChangeDelayMs = 1800;
+int resChangeDelayMs = 2000;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980"; // Beat Saber
 std::set<std::string> disabledAppsSet;
 // Resolution
 int initialRes = 100;
-int minRes = 75;
+int minRes = 70;
 int maxRes = 350;
 int resIncreaseThreshold = 80;
 int resDecreaseThreshold = 88;
 int resIncreaseMin = 3;
-int resDecreaseMin = 8;
+int resDecreaseMin = 7;
 int resIncreaseScale = 60;
 int resDecreaseScale = 90;
 float minCpuTimeThreshold = 0.6f;
@@ -92,7 +92,7 @@ bool vramOnlyMode = false;
 #pragma endregion
 
 // God help me with these method names
-std::string spaceDelimitedStringToNewlineDelimitedString(const std::string &val)
+std::string spaceStringToNewlineString(const std::string &val)
 {
 	std::string result;
 	std::stringstream ss(val);
@@ -106,7 +106,7 @@ std::string spaceDelimitedStringToNewlineDelimitedString(const std::string &val)
 	return result;
 }
 
-std::set<std::string> newlineDelimitedStringToSet(const std::string &val)
+std::set<std::string> newlineStringToSet(const std::string &val)
 {
 	std::set<std::string> set;
 	std::stringstream ss(val);
@@ -118,7 +118,7 @@ std::set<std::string> newlineDelimitedStringToSet(const std::string &val)
 	return set;
 }
 
-std::string setToSpaceDelimitedString(std::set<std::string> &valSet)
+std::string setToSpaceString(std::set<std::string> &valSet)
 {
 	std::string result = "";
 
@@ -146,8 +146,8 @@ bool loadSettings()
 	dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
 	if (dataAverageSamples > 128)
 		dataAverageSamples = 128; // Max stored by OpenVR
-	disabledApps = spaceDelimitedStringToNewlineDelimitedString(ini.GetValue("General", "disabledApps", disabledApps.c_str()));
-	disabledAppsSet = newlineDelimitedStringToSet(disabledApps);
+	disabledApps = spaceStringToNewlineString(ini.GetValue("General", "disabledApps", disabledApps.c_str()));
+	disabledAppsSet = newlineStringToSet(disabledApps);
 	// Resolution
 	initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
 	minRes = std::stoi(ini.GetValue("Resolution", "minRes", std::to_string(minRes).c_str()));
@@ -184,7 +184,7 @@ void saveSettings()
 	// General
 	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
 	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
-	ini.SetValue("General", "disabledApps", setToSpaceDelimitedString(disabledAppsSet).c_str());
+	ini.SetValue("General", "disabledApps", setToSpaceString(disabledAppsSet).c_str());
 	// Resolution
 	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes).c_str());
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes).c_str());
@@ -678,14 +678,14 @@ int main(int argc, char *argv[])
 					if (averageGpuTime < targetFrametime * (resIncreaseThreshold / 100.0f) && vramUsed < vramTarget / 100.0f && !vramOnlyMode)
 					{
 						// Increase resolution
-						newRes += ((((targetFrametime * (resIncreaseThreshold / 100.0f)) - averageGpuTime) / targetFrametime) *
+						newRes += (((targetFrametime * (resIncreaseThreshold / 100.0f)) - averageGpuTime) *
 								   (resIncreaseScale / 100.0f)) +
 								  resIncreaseMin;
 					}
 					else if (averageGpuTime > targetFrametime * (resDecreaseThreshold / 100.0f) && !vramOnlyMode)
 					{
 						// Decrease resolution
-						newRes -= (((averageGpuTime - (targetFrametime * (resDecreaseThreshold / 100.0f))) / targetFrametime) *
+						newRes -= ((averageGpuTime - (targetFrametime * (resDecreaseThreshold / 100.0f))) *
 								   (resDecreaseScale / 100.0f)) +
 								  resDecreaseMin;
 					}
@@ -864,7 +864,7 @@ int main(int argc, char *argv[])
 				addTooltip("Number of frames' frametimes to average out.");
 
 				if (ImGui::InputTextMultiline("Disabled apps", &disabledApps, ImVec2(130, 60)))
-					disabledAppsSet = newlineDelimitedStringToSet(disabledApps);
+					disabledAppsSet = newlineStringToSet(disabledApps);
 				addTooltip("List of OpenVR application keys that should be ignored for resolution adjustment in the format \'steam.app.APPID\' (e.g. steam.app.620980 for Beat Saber). One per line.");
 			}
 

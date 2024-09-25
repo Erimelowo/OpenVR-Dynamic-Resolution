@@ -5,8 +5,8 @@
 #include <thread>
 #include <fmt/core.h>
 #include <args.hxx>
-#include <stdlib.h>
-#include <thread>
+#include <cstdlib>
+#include <algorithm>
 
 // To include the nvml library at runtime
 #ifdef _WIN32
@@ -15,6 +15,7 @@
 #else
 #include <dlfcn.h>
 #endif
+
 
 // Loading and saving .ini configuration file
 #include "SimpleIni.h"
@@ -26,7 +27,7 @@
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-#pragma region Modifiy InputText so we can use std::string
+#pragma region Modify InputText so we can use std::string
 namespace ImGui
 {
 	// ImGui::InputText() with std::string
@@ -67,7 +68,7 @@ int minimizeOnStart = 0;
 int resChangeDelayMs = 2000;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980"; // Beat Saber
-std::set<std::string> disabledAppsSet;
+std::set<std::string> disabledAppsSet = { "steam.app.620980" };
 // Resolution
 int initialRes = 100;
 int minRes = 70;
@@ -91,41 +92,29 @@ bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
 #pragma endregion
 
-// God help me with these method names
-std::string spaceStringToNewlineString(const std::string &val)
-{
-	std::string result;
-	std::stringstream ss(val);
-	std::string word;
-
-	while (ss >> word)
-	{
-		result += word + "\n";
-	}
-
-	return result;
-}
-
-std::set<std::string> newlineStringToSet(const std::string &val)
+/// Newline-delimited string to a set
+std::set<std::string> multilineStringToSet(const std::string &val)
 {
 	std::set<std::string> set;
 	std::stringstream ss(val);
 	std::string word;
 
-   for (std::string line; std::getline(ss, line, '\n');)
-        set.insert(line);
+	for (std::string line; std::getline(ss, line, '\n');)
+		set.insert(line);
 
 	return set;
 }
 
-std::string setToSpaceString(std::set<std::string> &valSet)
+/// Set to a space-delimited string
+std::string setToConfigString(std::set<std::string> &valSet)
 {
-	std::string result = "";
+	std::string result;
 
 	for (std::string val : valSet)
 	{
 		result += (val + " ");
 	}
+	if(!result.empty()) { result.pop_back(); } // remove trailing space
 
 	return result;
 }
@@ -138,39 +127,46 @@ bool loadSettings()
 	if (rc < 0)
 		return false;
 
-	// Startup
-	autoStart = std::stoi(ini.GetValue("Startup", "autoStart", std::to_string(autoStart).c_str()));
-	minimizeOnStart = std::stoi(ini.GetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
-	// General
-	resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
-	dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
-	if (dataAverageSamples > 128)
-		dataAverageSamples = 128; // Max stored by OpenVR
-	disabledApps = spaceStringToNewlineString(ini.GetValue("General", "disabledApps", disabledApps.c_str()));
-	disabledAppsSet = newlineStringToSet(disabledApps);
-	// Resolution
-	initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
-	minRes = std::stoi(ini.GetValue("Resolution", "minRes", std::to_string(minRes).c_str()));
-	maxRes = std::stoi(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes).c_str()));
-	resIncreaseThreshold = std::stoi(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str()));
-	resDecreaseThreshold = std::stoi(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str()));
-	resIncreaseMin = std::stoi(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin).c_str()));
-	resDecreaseMin = std::stoi(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin).c_str()));
-	resIncreaseScale = std::stoi(ini.GetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale).c_str()));
-	resDecreaseScale = std::stoi(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str()));
-	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
-	resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
-	// Reprojection
-	alwaysReproject = std::stoi(ini.GetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
-	preferReprojection = std::stoi(ini.GetValue("Reprojection", "preferReprojection", std::to_string(preferReprojection).c_str()));
-	ignoreCpuTime = std::stoi(ini.GetValue("Reprojection", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
-	// VRAM
-	vramMonitorEnabled = std::stoi(ini.GetValue("VRAM", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
-	vramOnlyMode = std::stoi(ini.GetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
-	vramTarget = std::stoi(ini.GetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str()));
-	vramLimit = std::stoi(ini.GetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str()));
-
-	return true;
+	try
+	{
+		// Startup
+		autoStart = std::stoi(ini.GetValue("Startup", "autoStart", std::to_string(autoStart).c_str()));
+		minimizeOnStart = std::stoi(ini.GetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
+		// General
+		resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
+		dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+		if (dataAverageSamples > 128)
+			dataAverageSamples = 128; // Max stored by OpenVR
+		disabledApps = ini.GetValue("General", "disabledApps", disabledApps.c_str());
+		std::replace(disabledApps.begin(), disabledApps.end(), ' ', '\n'); // todo test
+		disabledAppsSet = multilineStringToSet(disabledApps);
+		// Resolution
+		initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
+		minRes = std::stoi(ini.GetValue("Resolution", "minRes", std::to_string(minRes).c_str()));
+		maxRes = std::stoi(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes).c_str()));
+		resIncreaseThreshold = std::stoi(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str()));
+		resDecreaseThreshold = std::stoi(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str()));
+		resIncreaseMin = std::stoi(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin).c_str()));
+		resDecreaseMin = std::stoi(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin).c_str()));
+		resIncreaseScale = std::stoi(ini.GetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale).c_str()));
+		resDecreaseScale = std::stoi(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str()));
+		minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
+		resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
+		// Reprojection
+		alwaysReproject = std::stoi(ini.GetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
+		preferReprojection = std::stoi(ini.GetValue("Reprojection", "preferReprojection", std::to_string(preferReprojection).c_str()));
+		ignoreCpuTime = std::stoi(ini.GetValue("Reprojection", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
+		// VRAM
+		vramMonitorEnabled = std::stoi(ini.GetValue("VRAM", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
+		vramOnlyMode = std::stoi(ini.GetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
+		vramTarget = std::stoi(ini.GetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str()));
+		vramLimit = std::stoi(ini.GetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str()));
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 void saveSettings()
@@ -184,7 +180,7 @@ void saveSettings()
 	// General
 	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
 	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
-	ini.SetValue("General", "disabledApps", setToSpaceString(disabledAppsSet).c_str());
+	ini.SetValue("General", "disabledApps", setToConfigString(disabledAppsSet).c_str());
 	// Resolution
 	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes).c_str());
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes).c_str());
@@ -281,11 +277,11 @@ std::string getCurrentApplicationKey()
 	char applicationKey[vr::k_unMaxApplicationKeyLength];
 
 	uint32_t processId = vr::VRApplications()->GetCurrentSceneProcessId();
-	if (processId == 0)
+	if (!processId)
 		return "";
 
 	EVRApplicationError err = vr::VRApplications()->GetApplicationKeyByProcessId(processId, applicationKey, vr::k_unMaxApplicationKeyLength);
-	if (err != VRApplicationError_None)
+	if (err)
 		return "";
 
 	return {applicationKey};
@@ -364,13 +360,13 @@ void addTooltip(const char *text)
 {
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");
-    if (ImGui::BeginItemTooltip())
-    {
-        ImGui::PushTextWrapPos(mainWindowWidth - 4);
-        ImGui::TextWrapped(text);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
+	if (ImGui::BeginItemTooltip())
+	{
+		ImGui::PushTextWrapPos(mainWindowWidth - 4);
+		ImGui::TextWrapped(text);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
 }
 
 int main(int argc, char *argv[])
@@ -422,10 +418,10 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 #pragma region VR init
-	EVRInitError init_error = VRInitError_None;
+	EVRInitError init_error;
 	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
 		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
-	if (init_error != VRInitError_None)
+	if (init_error)
 	{
 		system = nullptr;
 		printLine(window, VR_GetVRInitErrorAsEnglishDescription(init_error), 6000l);
@@ -452,7 +448,7 @@ int main(int argc, char *argv[])
 	else if (autoStartResult == 2)
 		printLine(window, "Disabled auto-start", 2800l);
 	else if (autoStartResult != 0)
-		printLine(window, fmt::format("Error toggling auto-start ({}) ", std::to_string(autoStartResult)), 6000l);
+		printLine(window, fmt::format("Error toggling auto-start ({}) ", autoStartResult), 6000l);
 
 	// Minimize or hide the window according to config
 	if (minimizeOnStart == 1) // Minimize
@@ -753,12 +749,12 @@ int main(int argc, char *argv[])
 			ImGui::NewLine();
 
 			// HMD Hz
-			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({} ms)", std::to_string(hmdHz), std::to_string(hmdFrametime).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
 
 			// Target FPS and frametime
 			if (!vramOnlyMode)
 			{
-				ImGui::Text(fmt::format("Target FPS: {} fps ({} ms)", std::to_string(targetFps), std::to_string(targetFrametime).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("Target FPS: {} fps ({:.2f} ms)", targetFps, targetFrametime).c_str());
 			}
 			else
 			{
@@ -768,35 +764,35 @@ int main(int argc, char *argv[])
 			// VRAM target and limit
 			if (nvmlEnabled && nvmlEnabled)
 			{
-				ImGui::Text(fmt::format("VRAM target: {} GB", std::to_string(vramTarget / 100.0f * vramTotalGB).substr(0, 4)).c_str());
-				ImGui::Text(fmt::format("VRAM limit: {} GB ", std::to_string(vramLimit / 100.0f * vramTotalGB).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("VRAM target: {:.2f} GB", vramTarget / 100.0f * vramTotalGB).c_str());
+				ImGui::Text(fmt::format("VRAM limit: {:.2f} GB ", vramLimit / 100.0f * vramTotalGB).c_str());
 			}
 			else
 			{
-				ImGui::Text(fmt::format("VRAM target: Disabled").c_str());
-				ImGui::Text(fmt::format("VRAM limit: Disabled").c_str());
+				ImGui::Text("VRAM target: Disabled");
+				ImGui::Text("VRAM limit: Disabled");
 			}
 
 			ImGui::NewLine();
 
 			// FPS and frametimes
-			ImGui::Text(fmt::format("FPS: {} fps", std::to_string(currentFps)).c_str());
-			ImGui::Text(fmt::format("GPU frametime: {} ms", std::to_string(averageGpuTime).substr(0, 4)).c_str());
-			ImGui::Text(fmt::format("CPU frametime: {} ms", std::to_string(averageCpuTime).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("FPS: {} fps", currentFps).c_str());
+			ImGui::Text(fmt::format("GPU frametime: {:.2f} ms", averageGpuTime).c_str());
+			ImGui::Text(fmt::format("CPU frametime: {:.2f} ms", averageCpuTime).c_str());
 
 			// VRAM usage
 			if (nvmlEnabled)
-				ImGui::Text(fmt::format("VRAM usage: {} GB", std::to_string(vramUsedGB).substr(0, 4)).c_str());
+				ImGui::Text(fmt::format("VRAM usage: {:.2f} GB", vramUsedGB).c_str());
 			else
 				ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
 
 			ImGui::NewLine();
 
 			// Reprojection ratio
-			ImGui::Text(fmt::format("Reprojection ratio: {}", std::to_string(averageFrameShown - 1).substr(0, 4)).c_str());
+			ImGui::Text(fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
 
 			// Current resolution
-			ImGui::Text(fmt::format("Resolution = {}", std::to_string(newRes)).c_str());
+			ImGui::Text(fmt::format("Resolution = {}", newRes).c_str());
 			// Resolution adjustment status
 			if (!adjustResolution)
 			{
@@ -864,7 +860,7 @@ int main(int argc, char *argv[])
 				addTooltip("Number of frames' frametimes to average out.");
 
 				if (ImGui::InputTextMultiline("Disabled apps", &disabledApps, ImVec2(130, 60)))
-					disabledAppsSet = newlineStringToSet(disabledApps);
+					disabledAppsSet = multilineStringToSet(disabledApps);
 				addTooltip("List of OpenVR application keys that should be ignored for resolution adjustment in the format \'steam.app.APPID\' (e.g. steam.app.620980 for Beat Saber). One per line.");
 			}
 

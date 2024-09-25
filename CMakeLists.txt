@@ -7,6 +7,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 ## Find dependencies
+find_package(Threads REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_library(OPENVR_LIB openvr_api)
 find_package(glfw3 REQUIRED)
@@ -33,7 +34,7 @@ ENDIF (APPLE)
 add_subdirectory(traypp EXCLUDE_FROM_ALL)
 link_libraries(tray)
 add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp" "src/lodepng.cpp")
-target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only glfw imgui::imgui)
+target_link_libraries("${PROJECT_NAME}" PRIVATE "${OPENVR_LIB}" fmt::fmt-header-only glfw imgui::imgui Threads::Threads)
 target_include_directories("${PROJECT_NAME}" PUBLIC ${protos_OUTPUT_DIR} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 

@@ -21,7 +21,7 @@ void shutdown_vr(vr::IVRSystem *_system)
 int handle_setup(bool install)
 {
 	vr::IVRApplications *apps = vr::VRApplications();
-	vr::EVRApplicationError app_error = vr::VRApplicationError_None;
+	vr::EVRApplicationError app_error;
 
 	bool currently_installed = apps->IsApplicationInstalled(application_key);
 
@@ -39,11 +39,11 @@ int handle_setup(bool install)
 		}
 
 		app_error = apps->AddApplicationManifest(manifest_path.c_str());
-		if (app_error != vr::VRApplicationError_None)
+		if (app_error)
 			return app_error;
 
 		app_error = apps->SetApplicationAutoLaunch(application_key, true);
-		if (app_error != vr::VRApplicationError_None)
+		if (app_error)
 			return app_error;
 
 		return 1;
@@ -54,7 +54,7 @@ int handle_setup(bool install)
 			return 0;
 
 		app_error = apps->SetApplicationAutoLaunch(application_key, false);
-		if (app_error != vr::VRApplicationError_None)
+		if (app_error)
 			return app_error;
 
 		return 2;

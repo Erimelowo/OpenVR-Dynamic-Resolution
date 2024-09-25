@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
 	Tray::Tray tray("OVRDR", "icon.ico");
 
 	// Construct menu
-	tray.addEntries(Tray::Button("Open", [&]
+	tray.addEntries(Tray::Button("Show", [&]
 								 { glfwShowWindow(window); }),
 					Tray::Button("Hide", [&]
 								 { glfwHideWindow(window); }),

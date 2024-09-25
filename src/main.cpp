@@ -29,11 +29,11 @@
 #pragma region Modifiy InputText so we can use std::string
 namespace ImGui
 {
-    // ImGui::InputText() with std::string
-    // Because text input needs dynamic resizing, we need to setup a callback to grow the capacity
-    IMGUI_API bool  InputText(const char* label, std::string* str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
-    IMGUI_API bool  InputTextMultiline(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
-    IMGUI_API bool  InputTextWithHint(const char* label, const char* hint, std::string* str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr);
+	// ImGui::InputText() with std::string
+	// Because text input needs dynamic resizing, we need to setup a callback to grow the capacity
+	IMGUI_API bool InputText(const char *label, std::string *str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void *user_data = nullptr);
+	IMGUI_API bool InputTextMultiline(const char *label, std::string *str, const ImVec2 &size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void *user_data = nullptr);
+	IMGUI_API bool InputTextWithHint(const char *label, const char *hint, std::string *str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void *user_data = nullptr);
 }
 #pragma endregion
 
@@ -63,44 +63,71 @@ static constexpr const float bitsToGB = 1073741824;
 // Initialization
 bool autoStart = 1;
 int minimizeOnStart = 0;
-
+// General
+int resChangeDelayMs = 1800;
+int dataAverageSamples = 128;
+std::string disabledApps = "steam.app.620980"; // Beat Saber
+std::set<std::string> disabledAppsSet;
 // Resolution
 int initialRes = 100;
 int minRes = 75;
 int maxRes = 350;
-int resChangeDelayMs = 1800;
-int dataAverageSamples = 128;
+int resIncreaseThreshold = 80;
+int resDecreaseThreshold = 88;
 int resIncreaseMin = 3;
 int resDecreaseMin = 8;
 int resIncreaseScale = 60;
 int resDecreaseScale = 90;
-int resIncreaseThreshold = 80;
-int resDecreaseThreshold = 88;
 float minCpuTimeThreshold = 0.6f;
 bool resetOnThreshold = true;
-bool ignoreCpuTime = false;
-bool preferReprojection = false;
+// Reprojection
 bool alwaysReproject = false;
+bool preferReprojection = false;
+bool ignoreCpuTime = false;
+// VRAM
 int vramTarget = 80;
 int vramLimit = 90;
 bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
-std::string disabledApps = "steam.app.620980";
-std::set<std::string> disabledAppsSet;
 #pragma endregion
 
-std::set<std::string> splitConfigValue(const std::string &val)
+// God help me with these method names
+std::string spaceDelimitedStringToNewlineDelimitedString(const std::string &val)
 {
-	std::set<std::string> set;
+	std::string result;
 	std::stringstream ss(val);
 	std::string word;
 
 	while (ss >> word)
 	{
-		set.insert(word);
+		result += word + "\n";
 	}
 
+	return result;
+}
+
+std::set<std::string> newlineDelimitedStringToSet(const std::string &val)
+{
+	std::set<std::string> set;
+	std::stringstream ss(val);
+	std::string word;
+
+   for (std::string line; std::getline(ss, line, '\n');)
+        set.insert(line);
+
 	return set;
+}
+
+std::string setToSpaceDelimitedString(std::set<std::string> &valSet)
+{
+	std::string result = "";
+
+	for (std::string val : valSet)
+	{
+		result += (val + " ");
+	}
+
+	return result;
 }
 
 bool loadSettings()
@@ -111,34 +138,37 @@ bool loadSettings()
 	if (rc < 0)
 		return false;
 
-	// Get setting values
-	autoStart = std::stoi(ini.GetValue("Initialization", "autoStart", std::to_string(autoStart).c_str()));
-	minimizeOnStart = std::stoi(ini.GetValue("Initialization", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
-
+	// Startup
+	autoStart = std::stoi(ini.GetValue("Startup", "autoStart", std::to_string(autoStart).c_str()));
+	minimizeOnStart = std::stoi(ini.GetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
+	// General
+	resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
+	dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+	if (dataAverageSamples > 128)
+		dataAverageSamples = 128; // Max stored by OpenVR
+	disabledApps = spaceDelimitedStringToNewlineDelimitedString(ini.GetValue("General", "disabledApps", disabledApps.c_str()));
+	disabledAppsSet = newlineDelimitedStringToSet(disabledApps);
+	// Resolution
 	initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
 	minRes = std::stoi(ini.GetValue("Resolution", "minRes", std::to_string(minRes).c_str()));
 	maxRes = std::stoi(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes).c_str()));
-	resChangeDelayMs = std::stoi(ini.GetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
-	dataAverageSamples = std::stoi(ini.GetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
-	if (dataAverageSamples > 128)
-		dataAverageSamples = 128; // Max stored by OpenVR
+	resIncreaseThreshold = std::stoi(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str()));
+	resDecreaseThreshold = std::stoi(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str()));
 	resIncreaseMin = std::stoi(ini.GetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin).c_str()));
 	resDecreaseMin = std::stoi(ini.GetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin).c_str()));
 	resIncreaseScale = std::stoi(ini.GetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale).c_str()));
 	resDecreaseScale = std::stoi(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str()));
-	resIncreaseThreshold = std::stoi(ini.GetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str()));
-	resDecreaseThreshold = std::stoi(ini.GetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str()));
 	minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
 	resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
-	ignoreCpuTime = std::stoi(ini.GetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
-	preferReprojection = std::stoi(ini.GetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str()));
-	alwaysReproject = std::stoi(ini.GetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
-	vramTarget = std::stoi(ini.GetValue("Resolution", "vramTarget", std::to_string(vramTarget).c_str()));
-	vramLimit = std::stoi(ini.GetValue("Resolution", "vramLimit", std::to_string(vramLimit).c_str()));
-	vramMonitorEnabled = std::stoi(ini.GetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
-	vramOnlyMode = std::stoi(ini.GetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
-	disabledApps = ini.GetValue("Resolution", "disabledApps", disabledApps.c_str());
-	disabledAppsSet = splitConfigValue(disabledApps);
+	// Reprojection
+	alwaysReproject = std::stoi(ini.GetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
+	preferReprojection = std::stoi(ini.GetValue("Reprojection", "preferReprojection", std::to_string(preferReprojection).c_str()));
+	ignoreCpuTime = std::stoi(ini.GetValue("Reprojection", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str()));
+	// VRAM
+	vramMonitorEnabled = std::stoi(ini.GetValue("VRAM", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str()));
+	vramOnlyMode = std::stoi(ini.GetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
+	vramTarget = std::stoi(ini.GetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str()));
+	vramLimit = std::stoi(ini.GetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str()));
 
 	return true;
 }
@@ -148,31 +178,34 @@ void saveSettings()
 	// Get ini file
 	CSimpleIniA ini;
 
-	// Set setting values
-	ini.SetValue("Initialization", "autoStart", std::to_string(autoStart).c_str());
-	ini.SetValue("Initialization", "minimizeOnStart", std::to_string(minimizeOnStart).c_str());
-
+	// Startup
+	ini.SetValue("Startup", "autoStart", std::to_string(autoStart).c_str());
+	ini.SetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str());
+	// General
+	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
+	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("General", "disabledApps", setToSpaceDelimitedString(disabledAppsSet).c_str());
+	// Resolution
 	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes).c_str());
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes).c_str());
 	ini.SetValue("Resolution", "maxRes", std::to_string(maxRes).c_str());
-	ini.SetValue("Resolution", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
-	ini.SetValue("Resolution", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str());
+	ini.SetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str());
 	ini.SetValue("Resolution", "resIncreaseMin", std::to_string(resIncreaseMin).c_str());
 	ini.SetValue("Resolution", "resDecreaseMin", std::to_string(resDecreaseMin).c_str());
 	ini.SetValue("Resolution", "resIncreaseScale", std::to_string(resIncreaseScale).c_str());
 	ini.SetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str());
-	ini.SetValue("Resolution", "resIncreaseThreshold", std::to_string(resIncreaseThreshold).c_str());
-	ini.SetValue("Resolution", "resDecreaseThreshold", std::to_string(resDecreaseThreshold).c_str());
 	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
 	ini.SetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str());
-	ini.SetValue("Resolution", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str());
-	ini.SetValue("Resolution", "preferReprojection", std::to_string(preferReprojection).c_str());
-	ini.SetValue("Resolution", "alwaysReproject", std::to_string(alwaysReproject).c_str());
-	ini.SetValue("Resolution", "vramTarget", std::to_string(vramTarget).c_str());
-	ini.SetValue("Resolution", "vramLimit", std::to_string(vramLimit).c_str());
-	ini.SetValue("Resolution", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str());
-	ini.SetValue("Resolution", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
-	ini.SetValue("Resolution", "disabledApps", disabledApps.c_str());
+	// Reprojection
+	ini.SetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str());
+	ini.SetValue("Reprojection", "preferReprojection", std::to_string(preferReprojection).c_str());
+	ini.SetValue("Reprojection", "ignoreCpuTime", std::to_string(ignoreCpuTime).c_str());
+	// VRAM
+	ini.SetValue("VRAM", "vramMonitorEnabled", std::to_string(vramMonitorEnabled).c_str());
+	ini.SetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
+	ini.SetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str());
+	ini.SetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str());
 
 	// Save changes to disk
 	ini.SaveFile("settings.ini");
@@ -327,6 +360,19 @@ void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
 	tray.exit();
 }
 
+void addTooltip(const char *text)
+{
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip())
+    {
+        ImGui::PushTextWrapPos(mainWindowWidth - 4);
+        ImGui::TextWrapped(text);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 int main(int argc, char *argv[])
 {
 #pragma region GUI init
@@ -375,7 +421,7 @@ int main(int argc, char *argv[])
 	glfwSetWindowIcon(window, 1, &icon);
 #pragma endregion
 
-#pragma region VR init check
+#pragma region VR init
 	EVRInitError init_error = VRInitError_None;
 	std::unique_ptr<IVRSystem, decltype(&shutdown_vr)> system(
 		VR_Init(&init_error, VRApplication_Overlay), &shutdown_vr);
@@ -437,7 +483,7 @@ int main(int argc, char *argv[])
 		void *nvmlLibrary = dlopen("libnvidia-ml.so", RTLD_LAZY);
 		nvmlInitPtr = (nvmlInit_t)dlsym(nvmlLibrary, "nvmlInit");
 #endif
-		if (!nvmlInitPtr) 
+		if (!nvmlInitPtr)
 		{
 			nvmlEnabled = false;
 		}
@@ -450,15 +496,15 @@ int main(int argc, char *argv[])
 			{
 				nvmlEnabled = false;
 			}
-			else 
+			else
 			{
 				// Get device handle
 				nvmlDeviceGetHandleByIndex_t nvmlDeviceGetHandleByIndexPtr;
 #ifdef _WIN32
 				nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
-#else	
+#else
 				nvmlDeviceGetHandleByIndexPtr = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLibrary, "nvmlDeviceGetHandleByIndex");
-#endif	
+#endif
 				if (!nvmlDeviceGetHandleByIndexPtr)
 					nvmlEnabled = false;
 				else
@@ -470,9 +516,9 @@ int main(int argc, char *argv[])
 					nvmlShutdown_t nvmlShutdownPtr;
 #ifdef _WIN32
 					nvmlShutdownPtr = (nvmlShutdown_t)GetProcAddress(nvmlLibrary, "nvmlShutdown");
-#else	
+#else
 					nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
-#endif	
+#endif
 					if (nvmlShutdownPtr)
 						nvmlShutdownPtr();
 				}
@@ -583,7 +629,8 @@ int main(int argc, char *argv[])
 			// or if CPU Frametime is double the target frametime,
 			// or if preferReprojection is true and CPU Frametime is greated than targetFrametime.
 			if ((((averageCpuTime > targetFrametime && preferReprojection) ||
-				  averageCpuTime / 2 > targetFrametime) && !ignoreCpuTime) ||
+				  averageCpuTime / 2 > targetFrametime) &&
+				 !ignoreCpuTime) ||
 				alwaysReproject)
 			{
 				targetFps /= 2;
@@ -592,14 +639,15 @@ int main(int argc, char *argv[])
 
 			// Get VRAM usage
 			float vramUsed = 0; // Assume we always have free VRAM by default
-			if (nvmlEnabled) {
+			if (nvmlEnabled)
+			{
 				// Get memory info
 				nvmlDeviceGetMemoryInfo_t nvmlDeviceGetMemoryInfoPtr;
 #ifdef _WIN32
 				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)GetProcAddress(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#else	
+#else
 				nvmlDeviceGetMemoryInfoPtr = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLibrary, "nvmlDeviceGetMemoryInfo");
-#endif	
+#endif
 				nvmlMemory_t nvmlMemory;
 				if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
 					nvmlEnabled = false;
@@ -610,8 +658,6 @@ int main(int argc, char *argv[])
 				if (nvmlEnabled) // Get the VRAM used in %
 					vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
 			}
-
-
 
 			// Check if the SteamVR dashboard is open
 			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
@@ -789,94 +835,111 @@ int main(int argc, char *argv[])
 			ImGui::Separator();
 			ImGui::NewLine();
 
-			// Settings
-			ImGui::Checkbox("Start with SteamVR", &autoStart);
-			ImGui::SetItemTooltip("Enabling this launch OVRDR with SteamVR automatically.");
+			// GUI settings inputs
+			if (ImGui::CollapsingHeader("Startup"))
+			{
+				ImGui::Checkbox("Start with SteamVR", &autoStart);
+				addTooltip("Automatically launch OVRDR alongside SteamVR.");
 
-			// todo fix tooltips going out of bound
-
-			ImGui::Text("Startup behaviour");
-			ImGui::RadioButton("Visible", &minimizeOnStart, 0);
-			ImGui::SetItemTooltip("Window is visible on startup.");
-			ImGui::RadioButton("Minimized", &minimizeOnStart, 1);
-			ImGui::SetItemTooltip("Minimize the window to the taskbar on startup.");
-			ImGui::RadioButton("Hidden (tray)", &minimizeOnStart, 2);
-			ImGui::SetItemTooltip("Hides the window completely on startup.");
-			
-			if (ImGui::InputInt("Initial resolution", &initialRes,  5))
-				initialRes = std::clamp(initialRes, 20, 500);
-			ImGui::SetItemTooltip("The resolution OVRDR will set your HMD's resolution to when starting. Also used when resetting resolution.");
-			
-			if (ImGui::InputInt("Minimum resolution", &minRes,  5))
-				minRes = std::clamp(minRes, 20, 500);
-			ImGui::SetItemTooltip("The minimum value OVRDR will set your HMD's resolution to.");
-			
-			if (ImGui::InputInt("Maximum resolution", &maxRes, 5))
-				maxRes = std::clamp(maxRes, 20, 500);
-			ImGui::SetItemTooltip("The maximum value OVRDR will set your HMD's resolution to.");
-			
-			if (ImGui::InputInt("Resolution change delay (ms)", &resChangeDelayMs, 50))
-				resChangeDelayMs = std::max(resChangeDelayMs, 10);
-			ImGui::SetItemTooltip("The delay between each resolution change. Lowering it will make changing resolution more responsive, but may cause more frequent stutters.");
-
-			if (ImGui::InputInt("Data average samples", &dataAverageSamples, 2)) {
-				dataAverageSamples = std::clamp(dataAverageSamples, 1, 128); // Max stored by OpenVR
-				frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
+				ImGui::Text("Startup behaviour:");
+				ImGui::RadioButton("Visible", &minimizeOnStart, 0);
+				addTooltip("Keep the OVRDR window visible on startup.");
+				ImGui::RadioButton("Minimized (taskbar)", &minimizeOnStart, 1);
+				addTooltip("Minimize the OVRDR window to the taskbar on startup.");
+				ImGui::RadioButton("Hidden (tray)", &minimizeOnStart, 2);
+				addTooltip("Hide the OVRDR window completely on startup. You can still show the window by clicking \"Show\" in the tray icon's context menu.");
 			}
-			ImGui::SetItemTooltip("Number of samples to use to average frametimes. One sample is received per frame.");
-			
-			ImGui::InputInt("Resolution increase minimum", &resIncreaseMin, 1);
-			ImGui::SetItemTooltip("How many static percentages to increase resolution when there's GPU and VRAM headroom.");
-			
-			ImGui::InputInt("Resolution decrease minimum", &resDecreaseMin, 1);
-			ImGui::SetItemTooltip("How many static percentages to decrease resolution when GPU frametime or VRAM usage is too high.");
-			
-			ImGui::InputInt("Resolution increase scale", &resIncreaseScale, 10);
-			ImGui::SetItemTooltip("How much to increase resolution depending on GPU frametime headroom.");
-			
-			ImGui::InputInt("Resolution decrease scale", &resDecreaseScale, 10);
-			ImGui::SetItemTooltip("How much to decrease resolution depending on GPU frametime excess.");
-			
-			if (ImGui::InputInt("Resolution increase threshold", &resIncreaseThreshold, 1))
-				resIncreaseThreshold = std::clamp(resIncreaseThreshold, 0, 100);
-			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop increase resolution.");
-			
-			if (ImGui::InputInt("Resolution decrease threshold", &resDecreaseThreshold, 1))
-				resDecreaseThreshold = std::clamp(resDecreaseThreshold, 0, 100);
-			ImGui::SetItemTooltip("Percentage of the target frametime at which the program will stop decreasing resolution.");
 
-			ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
-			ImGui::SetItemTooltip("Don't increase resolution when the CPU frametime is below this value.");
-			
-			ImGui::Checkbox("Reset on threshold", &resetOnThreshold);
-			ImGui::SetItemTooltip("When enabled, will reset the resolution to the initial resolution whenever the minimum CPU time threshold is met.");
-			
-			ImGui::Checkbox("Ignore CPU time", &ignoreCpuTime);
-			ImGui::SetItemTooltip("Enable to ignore CPU time during resolution adjustment.");
-			
-			ImGui::Checkbox("Prefer reprojection", &preferReprojection);
-			ImGui::SetItemTooltip("Enable to double the target frametime when the CPU frametime is over the initial target frametime.");
-			
-			ImGui::Checkbox("Always reproject", &alwaysReproject);
-			ImGui::SetItemTooltip("Enable this to always double the target frametime.");
-			
-			if (ImGui::InputInt("VRAM target", &vramTarget, 2))
-				vramTarget = std::clamp(vramTarget, 0, 100);
-			ImGui::SetItemTooltip("The target VRAM usage. Once your VRAM usage exceeds this amount, the resolution will stop increasing.");
-			
-			if (ImGui::InputInt("VRAM limit", &vramLimit, 2))
-				vramLimit = std::clamp(vramLimit, 0, 100);
-			ImGui::SetItemTooltip("The maximum VRAM usage. Once your VRAM usage exceeds this amount, the resolution will start decreasing.");
-			
-			ImGui::Checkbox("VRAM monitor enabled", &vramMonitorEnabled);
-			ImGui::SetItemTooltip("If enabled, VRAM specific features will be enabled. Otherwise it is assumed that free VRAM is always available.");
-			
-			ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
-			ImGui::SetItemTooltip("Enable to only adjust the resolution based off VRAM, ignoring GPU and CPU frametimes. Will always stay at the initial resolution or lower.");
-			
-			if (ImGui::InputText("Disabled apps", &disabledApps))
-				disabledAppsSet = splitConfigValue(disabledApps); // TODO test
-			ImGui::SetItemTooltip("Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.");
+			if (ImGui::CollapsingHeader("General"))
+			{
+				if (ImGui::InputInt("Resolution change delay ms", &resChangeDelayMs, 50))
+					resChangeDelayMs = std::max(resChangeDelayMs, 10);
+				addTooltip("Delay in milliseconds between resolution changes.");
+
+				if (ImGui::InputInt("Data average samples.", &dataAverageSamples, 2))
+				{
+					dataAverageSamples = std::clamp(dataAverageSamples, 1, 128); // Max stored by OpenVR
+					frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
+				}
+				addTooltip("Number of frames' frametimes to average out.");
+
+				if (ImGui::InputTextMultiline("Disabled apps", &disabledApps, ImVec2(130, 60)))
+					disabledAppsSet = newlineDelimitedStringToSet(disabledApps);
+				addTooltip("List of OpenVR application keys that should be ignored for resolution adjustment in the format \'steam.app.APPID\' (e.g. steam.app.620980 for Beat Saber). One per line.");
+			}
+
+			if (ImGui::CollapsingHeader("Resolution"))
+			{
+				if (ImGui::InputInt("Initial resolution", &initialRes, 5))
+					initialRes = std::clamp(initialRes, 20, 500);
+				addTooltip("The resolution set at startup. Also used when resetting resolution.");
+
+				if (ImGui::InputInt("Minimum resolution", &minRes, 5))
+					minRes = std::clamp(minRes, 20, 500);
+				addTooltip("The minimum resolution OVRDR will set.");
+
+				if (ImGui::InputInt("Maximum resolution", &maxRes, 5))
+					maxRes = std::clamp(maxRes, 20, 500);
+				addTooltip("The maximum resolution OVRDR will set.");
+
+				if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_NoTreePushOnOpen))
+				{
+					if (ImGui::InputInt("Increase threshold", &resIncreaseThreshold, 1))
+						resIncreaseThreshold = std::clamp(resIncreaseThreshold, 0, 100);
+					addTooltip("Percentage of the target frametime at which to stop increasing resolution.");
+
+					if (ImGui::InputInt("Decrease threshold", &resDecreaseThreshold, 1))
+						resDecreaseThreshold = std::clamp(resDecreaseThreshold, 0, 100);
+					addTooltip("Percentage of the target frametime at which to start decreasing resolution.");
+
+					ImGui::InputInt("Increase minimum", &resIncreaseMin, 1);
+					addTooltip("Percentages to increase resolution when available.");
+
+					ImGui::InputInt("Decrease minimum", &resDecreaseMin, 1);
+					addTooltip("Percentages to decrease resolution when needed.");
+
+					ImGui::InputInt("Increase scale", &resIncreaseScale, 10);
+					addTooltip("Resolution increase relative to frametime headroom. The more frametime headroom and the higher this value is, the faster resolution will increase.");
+
+					ImGui::InputInt("Decrease scale", &resDecreaseScale, 10);
+					addTooltip("Resolution decrease relative to frametime excess. The more frametime excess and the higher this value is, the faster resolution will decrease.");
+
+					ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
+					addTooltip("Don't increase resolution if the CPU frametime is below this value (useful to prevent resolution increases during loading screens).");
+
+					ImGui::Checkbox("Reset on CPU time threshold", &resetOnThreshold);
+					addTooltip("Reset the resolution to the initial resolution whenever the \"Minimum CPU time threshold\" is met.");
+				}
+			}
+
+			if (ImGui::CollapsingHeader("Reprojection"))
+			{
+				ImGui::Checkbox("Always reproject", &alwaysReproject);
+				addTooltip("Always double the target frametime.");
+
+				ImGui::Checkbox("Prefer reprojection", &preferReprojection);
+				addTooltip("If enabled, double the target frametime as soon as the CPU frametime is over the initial target frametime. Else, only double the target frametime if the CPU frametime is over double the initial target frametime.");
+
+				ImGui::Checkbox("Ignore CPU time", &ignoreCpuTime);
+				addTooltip("Never change the target frametime depending on the CPU frametime (stops both behaviours described in \"Prefer reprojection\" tooltip).");
+			}
+
+			if (ImGui::CollapsingHeader("VRAM"))
+			{
+				ImGui::Checkbox("VRAM monitor enabled", &vramMonitorEnabled);
+				addTooltip("Enable VRAM specific features. If disabled, it is assumed that free VRAM is always available.");
+
+				ImGui::Checkbox("VRAM-only mode", &vramOnlyMode);
+				addTooltip("Always stay at the initial resolution or lower based off available VRAM alone (ignoring frametimes).");
+
+				if (ImGui::InputInt("VRAM target", &vramTarget, 2))
+					vramTarget = std::clamp(vramTarget, 0, 100);
+				addTooltip("Resolution stops increasing once VRAM usage exceeds this percentage.");
+
+				if (ImGui::InputInt("VRAM limit", &vramLimit, 2))
+					vramLimit = std::clamp(vramLimit, 0, 100);
+				addTooltip("Resolution starts descreasing once VRAM usage exceeds this percentage.");
+			}
 
 			ImGui::NewLine();
 

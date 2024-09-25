@@ -747,7 +747,7 @@ int main(int argc, char *argv[])
 			ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
 
 			// Title
-			ImGui::Text("OVR Dynamic resolution");
+			ImGui::Text("OVR Dynamic Resolution");
 
 			ImGui::Separator();
 			ImGui::NewLine();

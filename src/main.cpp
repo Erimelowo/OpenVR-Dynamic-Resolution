@@ -39,9 +39,9 @@
 #define TRAY_ICON
 #endif
 
-//#ifndef HMODULE
-//#define HMODULE void *
-//#endif
+#ifndef WIN32
+#define HMODULE void *
+#endif
 
 #pragma region Modify InputText so we can use std::string
 namespace ImGui

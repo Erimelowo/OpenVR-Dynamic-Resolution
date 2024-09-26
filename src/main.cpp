@@ -314,8 +314,8 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		// Create the main window
-		ImGui::Begin("", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+		// Create the Print window
+		ImGui::Begin("Print", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		// Set position and size to fill the main window
 		ImGui::SetWindowPos(ImVec2(0, 0));

@@ -318,7 +318,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
 
 		// Display the line
-		ImGui::TextWrapped(text.c_str());
+		ImGui::TextWrapped("%s", text.c_str());
 
 		// Stop creating the main window
 		ImGui::End();
@@ -375,7 +375,7 @@ void addTooltip(const char *text)
 	if (ImGui::BeginItemTooltip())
 	{
 		ImGui::PushTextWrapPos(mainWindowWidth - 4);
-		ImGui::TextWrapped(text);
+		ImGui::TextWrapped("%s", text);
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
@@ -768,12 +768,12 @@ int main(int argc, char *argv[])
 			ImGui::NewLine();
 
 			// HMD Hz
-			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
+			ImGui::Text("%s", fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
 
 			// Target FPS and frametime
 			if (!vramOnlyMode)
 			{
-				ImGui::Text(fmt::format("Target FPS: {} fps ({:.2f} ms)", targetFps, targetFrametime).c_str());
+				ImGui::Text("%s", fmt::format("Target FPS: {} fps ({:.2f} ms)", targetFps, targetFrametime).c_str());
 			}
 			else
 			{
@@ -783,8 +783,8 @@ int main(int argc, char *argv[])
 			// VRAM target and limit
 			if (nvmlEnabled && nvmlEnabled)
 			{
-				ImGui::Text(fmt::format("VRAM target: {:.2f} GB", vramTarget / 100.0f * vramTotalGB).c_str());
-				ImGui::Text(fmt::format("VRAM limit: {:.2f} GB ", vramLimit / 100.0f * vramTotalGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM target: {:.2f} GB", vramTarget / 100.0f * vramTotalGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM limit: {:.2f} GB ", vramLimit / 100.0f * vramTotalGB).c_str());
 			}
 			else
 			{
@@ -795,23 +795,23 @@ int main(int argc, char *argv[])
 			ImGui::NewLine();
 
 			// FPS and frametimes
-			ImGui::Text(fmt::format("FPS: {} fps", currentFps).c_str());
-			ImGui::Text(fmt::format("GPU frametime: {:.2f} ms", averageGpuTime).c_str());
-			ImGui::Text(fmt::format("CPU frametime: {:.2f} ms", averageCpuTime).c_str());
+			ImGui::Text("%s", fmt::format("FPS: {} fps", currentFps).c_str());
+			ImGui::Text("%s", fmt::format("GPU frametime: {:.2f} ms", averageGpuTime).c_str());
+			ImGui::Text("%s", fmt::format("CPU frametime: {:.2f} ms", averageCpuTime).c_str());
 
 			// VRAM usage
 			if (nvmlEnabled)
-				ImGui::Text(fmt::format("VRAM usage: {:.2f} GB", vramUsedGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM usage: {:.2f} GB", vramUsedGB).c_str());
 			else
-				ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
+				ImGui::Text("%s", fmt::format("VRAM usage: Disabled").c_str());
 
 			ImGui::NewLine();
 
 			// Reprojection ratio
-			ImGui::Text(fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
+			ImGui::Text("%s", fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
 
 			// Current resolution
-			ImGui::Text(fmt::format("Resolution = {}", newRes).c_str());
+			ImGui::Text("%s", fmt::format("Resolution = {}", newRes).c_str());
 			// Resolution adjustment status
 			if (!adjustResolution)
 			{

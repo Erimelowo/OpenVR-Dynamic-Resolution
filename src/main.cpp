@@ -4,9 +4,10 @@
 #include <thread>
 #include <cstdlib>
 #include <algorithm>
+#include <filesystem>
 
 // OpenVR to interact with VR
-#include "openvr.h"
+#include <openvr.h>
 
 // fmt for text formatting
 #include <fmt/core.h>
@@ -27,13 +28,20 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include <glfw/glfw3.h> // Will drag system OpenGL headers
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
 // Loading png
 #include "lodepng.h"
 
 // Tray icon
-#include "tray.hpp"
+#if __has_include(<tray.hpp>)
+#include <tray.hpp>
+#define TRAY_ICON
+#endif
+
+#ifndef WIN32
+#define HMODULE void *
+#endif
 
 #pragma region Modify InputText so we can use std::string
 namespace ImGui
@@ -70,7 +78,7 @@ int minimizeOnStart = 0;
 int resChangeDelayMs = 2000;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980"; // Beat Saber
-std::set<std::string> disabledAppsSet = { "steam.app.620980" };
+std::set<std::string> disabledAppsSet = {"steam.app.620980"};
 // Resolution
 int initialRes = 100;
 int minRes = 70;
@@ -116,7 +124,11 @@ std::string setToConfigString(std::set<std::string> &valSet)
 	{
 		result += (val + " ");
 	}
-	if(!result.empty()) { result.pop_back(); } // remove trailing space
+	if (!result.empty())
+	{
+		// remove trailing space
+		result.pop_back();
+	} 
 
 	return result;
 }
@@ -310,7 +322,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 		ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
 
 		// Display the line
-		ImGui::TextWrapped(text.c_str());
+		ImGui::TextWrapped("%s", text.c_str());
 
 		// Stop creating the main window
 		ImGui::End();
@@ -326,7 +338,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 	}
 }
 
-void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
+void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary)
 {
 	// OpenVR cleanup
 	vr::VR_Shutdown();
@@ -354,8 +366,6 @@ void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
 	ImGui::DestroyContext();
 	glfwDestroyWindow(window);
 	glfwTerminate();
-
-	tray.exit();
 }
 
 void addTooltip(const char *text)
@@ -365,14 +375,23 @@ void addTooltip(const char *text)
 	if (ImGui::BeginItemTooltip())
 	{
 		ImGui::PushTextWrapPos(mainWindowWidth - 4);
-		ImGui::TextWrapped(text);
+		ImGui::TextWrapped("%s", text);
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
 }
 
+std::string executable_path;
+
+std::string get_executable_path()
+{
+	return executable_path;
+}
+
 int main(int argc, char *argv[])
 {
+	executable_path = argc > 0 ? std::filesystem::absolute(std::filesystem::path(argv[0])).string() : "";
+
 #pragma region GUI init
 	if (!glfwInit())
 		return 1;
@@ -528,10 +547,9 @@ int main(int argc, char *argv[])
 		nvmlEnabled = false;
 	}
 #pragma endregion
-
+#if defined(TRAY_ICON)
 	// Add tray icon
 	Tray::Tray tray("OVRDR", "icon.ico");
-
 	// Construct menu
 	tray.addEntries(Tray::Button("Show", [&]
 								 { glfwShowWindow(window); }),
@@ -539,10 +557,11 @@ int main(int argc, char *argv[])
 								 { glfwHideWindow(window); }),
 					Tray::Separator(),
 					Tray::Button("Exit", [&]
-								 { cleanup(window, nvmlLibrary, tray); return 0; }));
+								 { cleanup(window, nvmlLibrary); tray.exit(); return 0; }));
 
 	// Run in a thread
 	std::thread trayThread(&Tray::Tray::run, &tray);
+#endif // TRAY_ICON
 
 	// Initialize loop variables
 	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
@@ -751,12 +770,12 @@ int main(int argc, char *argv[])
 			ImGui::NewLine();
 
 			// HMD Hz
-			ImGui::Text(fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
+			ImGui::Text("%s", fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
 
 			// Target FPS and frametime
 			if (!vramOnlyMode)
 			{
-				ImGui::Text(fmt::format("Target FPS: {} fps ({:.2f} ms)", targetFps, targetFrametime).c_str());
+				ImGui::Text("%s", fmt::format("Target FPS: {} fps ({:.2f} ms)", targetFps, targetFrametime).c_str());
 			}
 			else
 			{
@@ -766,8 +785,8 @@ int main(int argc, char *argv[])
 			// VRAM target and limit
 			if (nvmlEnabled && nvmlEnabled)
 			{
-				ImGui::Text(fmt::format("VRAM target: {:.2f} GB", vramTarget / 100.0f * vramTotalGB).c_str());
-				ImGui::Text(fmt::format("VRAM limit: {:.2f} GB ", vramLimit / 100.0f * vramTotalGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM target: {:.2f} GB", vramTarget / 100.0f * vramTotalGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM limit: {:.2f} GB ", vramLimit / 100.0f * vramTotalGB).c_str());
 			}
 			else
 			{
@@ -778,23 +797,23 @@ int main(int argc, char *argv[])
 			ImGui::NewLine();
 
 			// FPS and frametimes
-			ImGui::Text(fmt::format("FPS: {} fps", currentFps).c_str());
-			ImGui::Text(fmt::format("GPU frametime: {:.2f} ms", averageGpuTime).c_str());
-			ImGui::Text(fmt::format("CPU frametime: {:.2f} ms", averageCpuTime).c_str());
+			ImGui::Text("%s", fmt::format("FPS: {} fps", currentFps).c_str());
+			ImGui::Text("%s", fmt::format("GPU frametime: {:.2f} ms", averageGpuTime).c_str());
+			ImGui::Text("%s", fmt::format("CPU frametime: {:.2f} ms", averageCpuTime).c_str());
 
 			// VRAM usage
 			if (nvmlEnabled)
-				ImGui::Text(fmt::format("VRAM usage: {:.2f} GB", vramUsedGB).c_str());
+				ImGui::Text("%s", fmt::format("VRAM usage: {:.2f} GB", vramUsedGB).c_str());
 			else
-				ImGui::Text(fmt::format("VRAM usage: Disabled").c_str());
+				ImGui::Text("%s", fmt::format("VRAM usage: Disabled").c_str());
 
 			ImGui::NewLine();
 
 			// Reprojection ratio
-			ImGui::Text(fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
+			ImGui::Text("%s", fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
 
 			// Current resolution
-			ImGui::Text(fmt::format("Resolution = {}", newRes).c_str());
+			ImGui::Text("%s", fmt::format("Resolution = {}", newRes).c_str());
 			// Resolution adjustment status
 			if (!adjustResolution)
 			{
@@ -1002,7 +1021,11 @@ int main(int argc, char *argv[])
 		std::this_thread::sleep_for(sleepTime);
 	}
 
-	cleanup(window, nvmlLibrary, tray);
+	cleanup(window, nvmlLibrary);
+
+#if defined(TRAY_ICON)
+	tray.exit();
+#endif // TRAY_ICON
 
 	return 0;
 }

@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.16)
 
 project(OVR-Dynamic-Resolution)
+set(CMAKE_CXX_STANDARD 17)
 
 include(cmake/CPM.cmake)
 
@@ -9,13 +10,45 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ## Find dependencies
 find_package(Threads REQUIRED)
 
-#CPMAddPackage("gh:ValveSoftware/openvr#v2.5.1")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  message(STATUS "Under Linux, you may need to add some dependencies.")
+  message(STATUS "Ubuntu users should try:")
+  message(STATUS "apt-get install libwayland-dev libxrandr-dev libxkbcommon-x11-dev libxinerama-dev libxcursor-dev libxi-dev  libglu1-mesa-dev freeglut3-dev mesa-common-dev")
+endif()
+
+
+IF(WIN32)
+  set(OPENVR_SHARED ON)
+ELSE()
+  set(OPENVR_SHARED OFF)
+ENDIF()
 CPMAddPackage(
   NAME openvr 
-  VERSION 2.5.1
-  GITHUB_REPOSITORY ValveSoftware/openvr
-  DOWNLOAD_ONLY TRUE
+  URL https://github.com/ValveSoftware/openvr/archive/refs/tags/v2.5.1.zip
+  OPTIONS "BUILD_SHARED ${OPENVR_SHARED}"
 )
+
+get_directory_property(OPENVR_LIBNAME
+    DIRECTORY ${openvr_SOURCE_DIR}
+    DEFINITION LIBNAME)
+
+get_directory_property(OPENVR_PLATFORM_NAME
+    DIRECTORY ${openvr_SOURCE_DIR}
+    DEFINITION PLATFORM_NAME)
+get_directory_property(OPENVR_PROCESSOR_ARCH
+    DIRECTORY ${openvr_SOURCE_DIR}
+    DEFINITION PROCESSOR_ARCH)
+get_directory_property(OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    DIRECTORY ${openvr_SOURCE_DIR}
+    DEFINITION CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+
+message(STATUS "OpenVR detected your system as ${OPENVR_PLATFORM_NAME}${OPENVR_PROCESSOR_ARCH}")
+
+if(EXISTS "${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+   message(STATUS "Recovering OpenVR library from ${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+else()
+   message(WARNING "Can't find OpenVR library at ${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY} Is your system supported?")
+endif()
 
 CPMAddPackage("gh:glfw/glfw#3.4")
 
@@ -47,11 +80,12 @@ CPMAddPackage(
 add_library(lodepng STATIC "${lodepng_SOURCE_DIR}/lodepng.cpp")
 target_include_directories(lodepng PUBLIC  "${lodepng_SOURCE_DIR}")
 
+IF(WIN32)
 CPMAddPackage(
     NAME tray
     URL https://github.com/Soundux/traypp/archive/698db7d58dd450cc9e30dc12d3bd0c5ca4d6a5b1.zip
 )
-link_libraries(tray)
+ENDIF()
 
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -67,14 +101,22 @@ IF (APPLE)
 SET(GUI_TYPE MACOSX_BUNDLE)
 ENDIF (APPLE)
 
-if (WIN32)
-  link_directories("${openvr_SOURCE_DIR}/lib/win64")
-elseif(UNIX)
-  link_directories("${openvr_SOURCE_DIR}/lib/linux64")
+link_directories("${openvr_SOURCE_DIR}/lib/${OPENVR_PLATFORM_NAME}${OPENVR_PROCESSOR_ARCH}")
+
+if(WIN32)
+link_directories("${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif()
+if(WIN32)
+add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
+else()
+add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/setup.cpp")
 endif()
 
-add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
-target_link_libraries("${PROJECT_NAME}" openvr_api fmt::fmt-header-only simpleini imgui lodepng tray Threads::Threads)
+target_link_libraries("${PROJECT_NAME}" openvr_api fmt::fmt-header-only simpleini imgui lodepng Threads::Threads)
+if(TARGET tray)
+  target_link_libraries("${PROJECT_NAME}" tray)
+endif()
+
 target_include_directories("${PROJECT_NAME}" PRIVATE ${CMAKE_CURRENT_BINARY_DIR} PUBLIC "${openvr_SOURCE_DIR}/headers")
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 
@@ -94,6 +136,7 @@ add_dependencies("${PROJECT_NAME}" version)
 install(TARGETS "${PROJECT_NAME}"
     RUNTIME
     DESTINATION .
+    BUNDLE DESTINATION ${CMAKE_SOURCE_DIR}
 )
 
 set(CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME})
@@ -113,10 +156,26 @@ set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
 set(CPACK_VERBATIM_VARIABLES YES)
 include(CPack)
 
+if(${OPENVR_PLATFORM_NAME}$ MATCHES "win.*")
+  set(OPENVR_DLL_NAME "openvr_api.dll")
+elseif(${OPENVR_PLATFORM_NAME}$ MATCHES "osx.*")
+  set(OPENVR_DLL_NAME "libopenvr_api.dylib")
+else()
+  set(OPENVR_DLL_NAME "libopenvr_api.so")
+endif()
+
+
+if(WIN32)
+    # Visual Studio
+    set(ACTUAL_CURRENT_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR}/Release)
+else()
+    set(ACTUAL_CURRENT_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+file(MAKE_DIRECTORY ${ACTUAL_CURRENT_BINARY_DIR}) # make sure it always exists
 # Copy files
-if (WIN32)
-  file(GLOB APP_RESOURCES "${CMAKE_SOURCE_DIR}/resources/*")
-  file(COPY ${openvr_SOURCE_DIR}/bin/win64/openvr_api.dll ${APP_RESOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
-elseif(UNIX)
-  file(COPY ${openvr_SOURCE_DIR}/bin/linux64/openvr_api.dll ${APP_RESOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(GLOB APP_RESOURCES "${CMAKE_SOURCE_DIR}/resources/*")
+if(EXISTS ${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${OPENVR_DLL_NAME})
+  file(COPY ${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${OPENVR_DLL_NAME} ${APP_RESOURCES} DESTINATION ${ACTUAL_CURRENT_BINARY_DIR})
+else()
+  file(COPY ${APP_RESOURCES} DESTINATION ${ACTUAL_CURRENT_BINARY_DIR})
 endif()

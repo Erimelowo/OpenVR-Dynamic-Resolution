@@ -16,11 +16,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   message(STATUS "apt-get install libwayland-dev libxrandr-dev libxkbcommon-x11-dev libxinerama-dev libxcursor-dev libxi-dev  libglu1-mesa-dev freeglut3-dev mesa-common-dev")
 endif()
 
-#CPMAddPackage("gh:ValveSoftware/openvr#v2.5.1")
 CPMAddPackage(
   NAME openvr 
   URL https://github.com/ValveSoftware/openvr/archive/refs/tags/v2.5.1.zip
-  DOWNLOAD_ONLY TRUE
 )
 
 
@@ -93,15 +91,15 @@ IF (APPLE)
 SET(GUI_TYPE MACOSX_BUNDLE)
 ENDIF (APPLE)
 
-link_directories("${openvr_SOURCE_DIR}/lib/${OPENVR_PLATFORM_NAME}${OPENVR_PROCESSOR_ARCH}")
+#link_directories("${openvr_SOURCE_DIR}/lib/${OPENVR_PLATFORM_NAME}${OPENVR_PROCESSOR_ARCH}")
 
-add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
-target_link_libraries("${PROJECT_NAME}"  fmt::fmt-header-only simpleini imgui lodepng Threads::Threads)
+add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/setup.cpp")
+target_link_libraries("${PROJECT_NAME}" openvr_api fmt::fmt-header-only simpleini imgui lodepng Threads::Threads)
 if(TARGET tray)
   target_link_libraries("${PROJECT_NAME}" tray)
 endif()
 
-target_include_directories("${PROJECT_NAME}" PRIVATE ${CMAKE_CURRENT_BINARY_DIR} PUBLIC "${openvr_SOURCE_DIR}/headers")
+#target_include_directories("${PROJECT_NAME}" PRIVATE ${CMAKE_CURRENT_BINARY_DIR} PUBLIC "${openvr_SOURCE_DIR}/headers")
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 
 # IDE Config

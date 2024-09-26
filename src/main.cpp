@@ -457,10 +457,7 @@ int main(int argc, char *argv[])
 
 	// Load settings from ini file
 	if (!loadSettings())
-	{
-		saveSettings();
-		printLine(window, "Error reading settings.ini, restoring defaults", 4100l);
-	}
+		saveSettings(); // Restore settings
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);

@@ -78,7 +78,7 @@ int minimizeOnStart = 0;
 int resChangeDelayMs = 2000;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980"; // Beat Saber
-std::set<std::string> disabledAppsSet = { "steam.app.620980" };
+std::set<std::string> disabledAppsSet = {"steam.app.620980"};
 // Resolution
 int initialRes = 100;
 int minRes = 70;
@@ -124,7 +124,11 @@ std::string setToConfigString(std::set<std::string> &valSet)
 	{
 		result += (val + " ");
 	}
-	if(!result.empty()) { result.pop_back(); } // remove trailing space
+	if (!result.empty())
+	{
+		// remove trailing space
+		result.pop_back();
+	} 
 
 	return result;
 }
@@ -379,14 +383,15 @@ void addTooltip(const char *text)
 
 std::string executable_path;
 
-std::string get_executable_path() {
+std::string get_executable_path()
+{
 	return executable_path;
 }
 
 int main(int argc, char *argv[])
 {
 	executable_path = argc > 0 ? std::filesystem::absolute(std::filesystem::path(argv[0])).string() : "";
-	
+
 #pragma region GUI init
 	if (!glfwInit())
 		return 1;

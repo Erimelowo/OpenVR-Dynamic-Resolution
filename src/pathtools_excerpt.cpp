@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include <stdlib.h>
 #include "pathtools_excerpt.h"
-
+std::string get_executable_path();
 bool Path_IsAbsolute(const std::string& sPath)
 {
     if (sPath.empty())
@@ -231,7 +231,8 @@ std::string Path_GetExecutablePath()
 		return "";
 	}
 #else
-    #error Implement Plat_GetExecutablePath
+    return get_executable_path();
+    //#error Implement Plat_GetExecutablePath
 	// AssertMsg( false, "Implement Plat_GetExecutablePath" );
 	// return "";
 #endif

@@ -85,7 +85,8 @@ Then you can build the project by running:
 cmake --build build --config Release
 ```
 
-The newly built binary, its dependencies and resources will be in the `ReleaseFiles` directory.  
+The newly built binary, its dependencies and resources will be in the `build/release` directory.  
+You can delete `imgui.lib` and `lodepng.lib`.
 
 ## Licensing
 

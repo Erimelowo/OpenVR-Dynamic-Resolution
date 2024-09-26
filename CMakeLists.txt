@@ -115,25 +115,8 @@ include(CPack)
 
 # Copy files
 if (WIN32)
-  set(RELEASE_FILES_DIR ${CMAKE_SOURCE_DIR}/ReleaseFiles)
-  file(MAKE_DIRECTORY ${RELEASE_FILES_DIR})
   file(GLOB APP_RESOURCES "${CMAKE_SOURCE_DIR}/resources/*")
-  
-  add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_BINARY_DIR}/Release/OVR-Dynamic-Resolution.exe
-            ${RELEASE_FILES_DIR})
-
-  add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            ${openvr_SOURCE_DIR}/bin/win64/openvr_api.dll
-            ${RELEASE_FILES_DIR})
-
-  add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            ${APP_RESOURCES}
-            ${RELEASE_FILES_DIR})
-endif(WIN32)
+  file(COPY ${openvr_SOURCE_DIR}/bin/win64/openvr_api.dll ${APP_RESOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Release)
+elseif(UNIX)
+  file(COPY ${openvr_SOURCE_DIR}/bin/linux64/openvr_api.dll ${APP_RESOURCES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()

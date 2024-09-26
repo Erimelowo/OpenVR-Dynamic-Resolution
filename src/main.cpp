@@ -4,6 +4,7 @@
 #include <thread>
 #include <cstdlib>
 #include <algorithm>
+#include <filesystem>
 
 // OpenVR to interact with VR
 #include "openvr.h"
@@ -33,7 +34,14 @@
 #include "lodepng.h"
 
 // Tray icon
-#include "tray.hpp"
+#if __has_include(<tray.hpp>)
+#include <tray.hpp>
+#define TRAY_ICON
+#endif
+
+#ifndef HMODULE
+#define HMODULE void *
+#endif
 
 #pragma region Modify InputText so we can use std::string
 namespace ImGui
@@ -326,6 +334,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 	}
 }
 
+#if defined(TRAY_ICON)
 void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
 {
 	// OpenVR cleanup
@@ -357,6 +366,7 @@ void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
 
 	tray.exit();
 }
+#endif // TRAY_ICON
 
 void addTooltip(const char *text)
 {
@@ -371,8 +381,15 @@ void addTooltip(const char *text)
 	}
 }
 
+std::string executable_path;
+
+std::string get_executable_path() {
+	return executable_path;
+}
+
 int main(int argc, char *argv[])
 {
+	executable_path = std::filesystem::absolute(std::filesystem::path(argv[0]));
 #pragma region GUI init
 	if (!glfwInit())
 		return 1;
@@ -528,10 +545,9 @@ int main(int argc, char *argv[])
 		nvmlEnabled = false;
 	}
 #pragma endregion
-
+#if defined(TRAY_ICON)
 	// Add tray icon
 	Tray::Tray tray("OVRDR", "icon.ico");
-
 	// Construct menu
 	tray.addEntries(Tray::Button("Show", [&]
 								 { glfwShowWindow(window); }),
@@ -543,6 +559,7 @@ int main(int argc, char *argv[])
 
 	// Run in a thread
 	std::thread trayThread(&Tray::Tray::run, &tray);
+#endif // TRAY_ICON
 
 	// Initialize loop variables
 	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
@@ -1001,9 +1018,9 @@ int main(int argc, char *argv[])
 		// ZZzzzz
 		std::this_thread::sleep_for(sleepTime);
 	}
-
+#if defined(TRAY_ICON)
 	cleanup(window, nvmlLibrary, tray);
-
+#endif // TRAY_ICON
 	return 0;
 }
 

@@ -1,6 +1,7 @@
 # OpenVR Dynamic Resolution
 
-[![Windows build testing](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
+[![Windows build testing](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml/badge.svg)](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/actions/workflows/vs17.yml)
+[![Ubuntu 22.04](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/actions/workflows/Ubuntu.yml)
 
 ![screenshot of the app](screenshot.png)
 
@@ -14,7 +15,7 @@ This is **not** the same as SteamVR's Auto Resolution, which instead seems to be
 
 ## Installation/Using It
 
-- Download the [latest release ](https://github.com/Louka3000/OpenVR-Dynamic-Resolution/releases/latest/download/OVR-Dynamic-Resolution.zip)
+- Download the [latest release ](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/releases/latest/download/OVR-Dynamic-Resolution.zip)
 - Extract the .zip
 - Launch `OVR-Dynamic-Resolution.exe`
 
@@ -80,13 +81,13 @@ cd OpenVR-Dynamic-Resolution
 cmake -B build
 ```
 
-Then you can build the project by running:
+Then you can build the project in release mode by running:
 ```
 cmake --build build --config Release
 ```
 
 The newly built binary, its dependencies and resources will be in the `build/release` directory.  
-You can delete `imgui.lib` and `lodepng.lib`.
+Note: you can delete `imgui.lib` and `lodepng.lib` as they're just leftovers.
 
 ## Licensing
 

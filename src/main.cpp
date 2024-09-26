@@ -1,12 +1,15 @@
-#include <openvr.h>
 #include <chrono>
 #include <set>
 #include <sstream>
 #include <thread>
-#include <fmt/core.h>
-#include <args.hxx>
 #include <cstdlib>
 #include <algorithm>
+
+// OpenVR to interact with VR
+#include "openvr.h"
+
+// fmt for text formatting
+#include <fmt/core.h>
 
 // To include the nvml library at runtime
 #ifdef _WIN32
@@ -16,7 +19,6 @@
 #include <dlfcn.h>
 #endif
 
-
 // Loading and saving .ini configuration file
 #include "SimpleIni.h"
 #include "setup.hpp"
@@ -25,7 +27,13 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+#include <glfw/glfw3.h> // Will drag system OpenGL headers
+
+// Loading png
+#include "lodepng.h"
+
+// Tray icon
+#include "tray.hpp"
 
 #pragma region Modify InputText so we can use std::string
 namespace ImGui
@@ -37,12 +45,6 @@ namespace ImGui
 	IMGUI_API bool InputTextWithHint(const char *label, const char *hint, std::string *str, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void *user_data = nullptr);
 }
 #pragma endregion
-
-// Loading png
-#include "lodepng.h"
-
-// Tray icon
-#include <tray.hpp>
 
 using namespace std::chrono_literals;
 using namespace vr;

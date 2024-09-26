@@ -382,3 +382,4 @@ INSTALL.vcxproj.filters
 CPackSourceConfig.cmake
 CPackConfig.cmake
 cmake_install.cmake
+/ReleaseFiles

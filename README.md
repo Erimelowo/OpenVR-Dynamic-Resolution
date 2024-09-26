@@ -72,17 +72,20 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 ## Building from source
 
 We assume that you already have Git and CMake installed.
-To build the project, run:
+To set up the project, run:
 
 ```
-git clone --recursive https://github.com/Erimelowo/OpenVR-Dynamic-Resolution.git
+git clone https://github.com/Erimelowo/OpenVR-Dynamic-Resolution.git
 cd OpenVR-Dynamic-Resolution
 cmake -B build
+```
+
+Then you can build the project by running:
+```
 cmake --build build --config Release
 ```
 
-The newly built binary and its dependencies will be located at `\build\Release\OpenVR-Dynamic-Resolution.exe`.  
-The `resources` directory contains additional files that are distributed in releases and that you might want.  
+The newly built binary, its dependencies and resources will be in the `ReleaseFiles` directory.  
 
 ## Licensing
 

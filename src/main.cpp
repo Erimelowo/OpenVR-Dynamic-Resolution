@@ -334,8 +334,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 	}
 }
 
-#if defined(TRAY_ICON)
-void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
+void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary)
 {
 	// OpenVR cleanup
 	vr::VR_Shutdown();
@@ -363,10 +362,7 @@ void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary, Tray::Tray tray)
 	ImGui::DestroyContext();
 	glfwDestroyWindow(window);
 	glfwTerminate();
-
-	tray.exit();
 }
-#endif // TRAY_ICON
 
 void addTooltip(const char *text)
 {
@@ -555,7 +551,7 @@ int main(int argc, char *argv[])
 								 { glfwHideWindow(window); }),
 					Tray::Separator(),
 					Tray::Button("Exit", [&]
-								 { cleanup(window, nvmlLibrary, tray); return 0; }));
+								 { cleanup(window, nvmlLibrary); tray.exit(); return 0; }));
 
 	// Run in a thread
 	std::thread trayThread(&Tray::Tray::run, &tray);
@@ -1018,9 +1014,13 @@ int main(int argc, char *argv[])
 		// ZZzzzz
 		std::this_thread::sleep_for(sleepTime);
 	}
+
+	cleanup(window, nvmlLibrary);
+
 #if defined(TRAY_ICON)
-	cleanup(window, nvmlLibrary, tray);
+	tray.exit();
 #endif // TRAY_ICON
+
 	return 0;
 }
 

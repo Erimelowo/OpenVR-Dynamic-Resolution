@@ -7,7 +7,7 @@
 #include <filesystem>
 
 // OpenVR to interact with VR
-#include "openvr.h"
+#include <openvr.h>
 
 // fmt for text formatting
 #include <fmt/core.h>
@@ -39,9 +39,9 @@
 #define TRAY_ICON
 #endif
 
-#ifndef HMODULE
-#define HMODULE void *
-#endif
+//#ifndef HMODULE
+//#define HMODULE void *
+//#endif
 
 #pragma region Modify InputText so we can use std::string
 namespace ImGui
@@ -389,7 +389,7 @@ std::string get_executable_path() {
 
 int main(int argc, char *argv[])
 {
-	executable_path = std::filesystem::absolute(std::filesystem::path(argv[0]));
+	executable_path = std::filesystem::absolute(std::filesystem::path(argv[0])).string();
 #pragma region GUI init
 	if (!glfwInit())
 		return 1;

@@ -315,7 +315,7 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 		ImGui::NewFrame();
 
 		// Create the Print window
-		ImGui::Begin("Print", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+		ImGui::Begin("printLine", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
 
 		// Set position and size to fill the main window
 		ImGui::SetWindowPos(ImVec2(0, 0));
@@ -461,11 +461,7 @@ int main(int argc, char *argv[])
 
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
-	if (autoStartResult == 1)
-		printLine(window, "Enabled auto-start", 2800l);
-	else if (autoStartResult == 2)
-		printLine(window, "Disabled auto-start", 2800l);
-	else if (autoStartResult != 0)
+	if (autoStartResult != 0)
 		printLine(window, fmt::format("Error toggling auto-start ({}) ", autoStartResult), 6000l);
 
 	// Minimize or hide the window according to config

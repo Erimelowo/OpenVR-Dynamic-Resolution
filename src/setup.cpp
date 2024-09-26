@@ -33,7 +33,7 @@ int handle_setup(bool install)
 			if (!apps->GetApplicationAutoLaunch(application_key))
 			{
 				apps->SetApplicationAutoLaunch(application_key, true);
-				return 1;
+				return 0;
 			}
 			return 0;
 		}
@@ -46,7 +46,7 @@ int handle_setup(bool install)
 		if (app_error)
 			return app_error;
 
-		return 1;
+		return 0;
 	}
 	else if (currently_installed)
 	{
@@ -57,7 +57,7 @@ int handle_setup(bool install)
 		if (app_error)
 			return app_error;
 
-		return 2;
+		return 0;
 	}
 	else
 		return 0;

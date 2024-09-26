@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.16)
 
 project(OVR-Dynamic-Resolution)
 
@@ -9,11 +9,16 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ## Find dependencies
 find_package(Threads REQUIRED)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  message(STATUS "Under Linux, you may need to add some dependencies.")
+  message(STATUS "Ubuntu users should try:")
+  message(STATUS "apt-get install libwayland-dev libxrandr-dev libxkbcommon-x11-dev libxinerama-dev libxcursor-dev libxi-dev  libglu1-mesa-dev freeglut3-dev mesa-common-dev")
+endif()
+
 #CPMAddPackage("gh:ValveSoftware/openvr#v2.5.1")
 CPMAddPackage(
   NAME openvr 
-  VERSION 2.5.1
-  GITHUB_REPOSITORY ValveSoftware/openvr
+  URL https://github.com/ValveSoftware/openvr/archive/refs/tags/v2.5.1.zip
   DOWNLOAD_ONLY TRUE
 )
 

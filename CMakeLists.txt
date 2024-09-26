@@ -91,10 +91,6 @@ add_custom_target(
 )
 add_dependencies("${PROJECT_NAME}" version)
 
-install(FILES "${PROJECT_SOURCE_DIR}/manifest.vrmanifest"
-    DESTINATION "."
-)
-
 install(TARGETS "${PROJECT_NAME}"
     RUNTIME
     DESTINATION .
@@ -118,11 +114,26 @@ set(CPACK_VERBATIM_VARIABLES YES)
 include(CPack)
 
 # Copy files
-set(RELEASE_FILES_DIR ${CMAKE_SOURCE_DIR}/ReleaseFiles)
-file(MAKE_DIRECTORY ${RELEASE_FILES_DIR})
 if (WIN32)
+  set(RELEASE_FILES_DIR ${CMAKE_SOURCE_DIR}/ReleaseFiles)
+  file(MAKE_DIRECTORY ${RELEASE_FILES_DIR})
   file(GLOB APP_RESOURCES "${CMAKE_SOURCE_DIR}/resources/*")
-  file(COPY ${openvr_SOURCE_DIR}/bin/win64/openvr_api.dll ${CMAKE_CURRENT_BINARY_DIR}/Release/OVR-Dynamic-Resolution.exe ${APP_RESOURCES} DESTINATION ${RELEASE_FILES_DIR})
-elseif(UNIX)
-  file(COPY ${openvr_SOURCE_DIR}/bin/linux64/openvr_api.dll ${APP_RESOURCES} DESTINATION ${RELEASE_FILES_DIR})
-endif()
+  
+  add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_BINARY_DIR}/Release/OVR-Dynamic-Resolution.exe
+            ${RELEASE_FILES_DIR})
+
+  add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${openvr_SOURCE_DIR}/bin/win64/openvr_api.dll
+            ${RELEASE_FILES_DIR})
+
+  add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${APP_RESOURCES}
+            ${RELEASE_FILES_DIR})
+endif(WIN32)

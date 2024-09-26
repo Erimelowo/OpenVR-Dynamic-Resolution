@@ -385,7 +385,8 @@ std::string get_executable_path() {
 
 int main(int argc, char *argv[])
 {
-	executable_path = std::filesystem::absolute(std::filesystem::path(argv[0])).string();
+	executable_path = argc > 0 ? std::filesystem::absolute(std::filesystem::path(argv[0])).string() : "";
+	
 #pragma region GUI init
 	if (!glfwInit())
 		return 1;

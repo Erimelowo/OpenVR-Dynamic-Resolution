@@ -75,20 +75,20 @@ static constexpr const float bitsToGB = 1073741824;
 bool autoStart = 1;
 int minimizeOnStart = 0;
 // General
-int resChangeDelayMs = 2000;
+int resChangeDelayMs = 2500;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980"; // Beat Saber
 std::set<std::string> disabledAppsSet = {"steam.app.620980"};
 // Resolution
 int initialRes = 100;
 int minRes = 70;
-int maxRes = 350;
+int maxRes = 250;
 int resIncreaseThreshold = 80;
 int resDecreaseThreshold = 88;
 int resIncreaseMin = 3;
-int resDecreaseMin = 7;
-int resIncreaseScale = 60;
-int resDecreaseScale = 90;
+int resDecreaseMin = 6;
+int resIncreaseScale = 120;
+int resDecreaseScale = 130;
 float minCpuTimeThreshold = 0.6f;
 bool resetOnThreshold = true;
 // Reprojection

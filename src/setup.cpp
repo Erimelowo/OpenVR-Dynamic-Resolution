@@ -5,7 +5,7 @@
 #include "pathtools_excerpt.h"
 
 static constexpr const char *rel_manifest_path = "./manifest.vrmanifest";
-static constexpr const char *application_key = "ovr-dynamic-resolution";
+static constexpr const char *application_key = "steam.overlay.3243840";
 
 void shutdown_vr(vr::IVRSystem *_system)
 {

@@ -2,7 +2,7 @@
 	"source" : "builtin",
 	"applications": [
 		{
-			"app_key": "ovr-dynamic-resolution",
+			"app_key": "steam.overlay.3243840",
 			"launch_type": "binary",
 			"binary_path_windows": "OVR-Dynamic-Resolution.exe",
 			"is_dashboard_overlay": true,
@@ -10,7 +10,7 @@
 			"strings": {
 				"en_us": {
 					"name": "OVR Dynamic Resolution",
-					"description": "Adjusts HMD resolution with frametimes"
+					"description": "OVR Dynamic Resolution"
 				}
 			}
 		}

@@ -128,7 +128,7 @@ std::string setToConfigString(std::set<std::string> &valSet)
 	{
 		// remove trailing space
 		result.pop_back();
-	} 
+	}
 
 	return result;
 }
@@ -299,6 +299,21 @@ std::string getCurrentApplicationKey()
 		return "";
 
 	return {applicationKey};
+}
+
+bool isApplicationDisabled(std::string appKey)
+{
+	return disabledAppsSet.find(appKey) != disabledAppsSet.end() || appKey == "";
+}
+
+bool shouldAdjustResolution(std::string appKey, bool userPauseRes)
+{
+	// Check if the SteamVR dashboard is open
+	bool inDashboard = vr::VROverlay()->IsDashboardVisible();
+	// Check that we're in a supported application
+	bool isCurrentAppDisabled = isApplicationDisabled(appKey);
+	// Only adjust resolution if not in dashboard, in a supported application, and user didn't pause res
+	return !inDashboard && !isCurrentAppDisabled && !userPauseRes;
 }
 
 void printLine(GLFWwindow *window, std::string text, long duration)
@@ -561,6 +576,7 @@ int main(int argc, char *argv[])
 	long lastChangeTime = 0;
 	bool adjustResolution = true;
 	bool openvrQuit = false;
+	bool userPauseRes = false;
 
 	// Resolution variables to display in GUI
 	float averageGpuTime = 0;
@@ -668,17 +684,12 @@ int main(int argc, char *argv[])
 				if (nvmlEnabled) // Get the VRAM used in %
 					vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
 			}
-
-			// Check if the SteamVR dashboard is open
-			bool inDashboard = vr::VROverlay()->IsDashboardVisible();
-			// Check that we're in a supported application
-			std::string appKey = getCurrentApplicationKey();
-			bool isCurrentAppDisabled = disabledAppsSet.find(appKey) != disabledAppsSet.end() || appKey == "";
 #pragma endregion
 
 #pragma region Resolution adjustment
-			// Only adjust resolution if not in dashboard and in a supported application
-			adjustResolution = !inDashboard && !isCurrentAppDisabled;
+			// Get the current application key
+			std::string appKey = getCurrentApplicationKey();
+			adjustResolution = shouldAdjustResolution(appKey, userPauseRes);
 			if (adjustResolution)
 			{
 				// Adjust resolution
@@ -721,9 +732,9 @@ int main(int argc, char *argv[])
 					newRes = initialRes;
 				}
 			}
-			else if (isCurrentAppDisabled)
+			else if (appKey == "")
 			{
-				// We've switched into an unsupported application, let's reset
+				// We're in the SteamVR void. Use default resolution.
 				newRes = initialRes;
 			}
 
@@ -821,6 +832,20 @@ int main(int argc, char *argv[])
 			if (settingsPressed)
 				showSettings = true;
 
+			// Resolution pausing
+			ImGui::SameLine();
+			const char *pauseText;
+			if (!userPauseRes)
+				pauseText = "Pause resolution";
+			else
+				pauseText = "Unpause resolution";
+			bool pausePressed = ImGui::Button(pauseText, ImVec2(142, 28));
+			if (pausePressed)
+			{
+				userPauseRes = !userPauseRes;
+				adjustResolution = shouldAdjustResolution(getCurrentApplicationKey(), userPauseRes);
+			}
+
 			// Stop creating the main window
 			ImGui::End();
 		}
@@ -873,9 +898,19 @@ int main(int argc, char *argv[])
 				}
 				addTooltip("Number of frames' frametimes to average out.");
 
-				if (ImGui::InputTextMultiline("Disabled apps", &disabledApps, ImVec2(130, 60)))
+				if (ImGui::InputTextMultiline("Disabled applications", &disabledApps, ImVec2(130, 60)))
 					disabledAppsSet = multilineStringToSet(disabledApps);
 				addTooltip("List of OpenVR application keys that should be ignored for resolution adjustment in the format \'steam.app.APPID\' (e.g. steam.app.620980 for Beat Saber). One per line.");
+				if (ImGui::Button("Disable current application", ImVec2(200, 26)))
+				{
+					std::string appKey = getCurrentApplicationKey();
+					if (!isApplicationDisabled(appKey))
+					{
+						disabledAppsSet.insert(appKey);
+						disabledApps += "\n" + appKey;
+					}
+				}
+				addTooltip("Adds the current application to the list of disable applications.");
 			}
 
 			if (ImGui::CollapsingHeader("Resolution"))

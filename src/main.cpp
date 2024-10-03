@@ -999,7 +999,10 @@ int main(int argc, char *argv[])
 			bool revertPressed = ImGui::Button("Revert", ImVec2(82, 28));
 			if (revertPressed)
 			{
+				int oldDataAverageSamples = dataAverageSamples;
 				loadSettings();
+				if (oldDataAverageSamples != dataAverageSamples)
+					frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
 			}
 			ImGui::SameLine();
 			pushGreenButtonColour();

@@ -2,15 +2,15 @@
 	"source" : "builtin",
 	"applications": [
 		{
-			"app_key": "openvr-dynamic-resolution",
+			"app_key": "steam.overlay.3243840",
 			"launch_type": "binary",
-			"binary_path_windows": "OpenVR-Dynamic-Resolution.exe",
+			"binary_path_windows": "OVR-Dynamic-Resolution.exe",
 			"is_dashboard_overlay": true,
 
 			"strings": {
 				"en_us": {
-					"name": "OpenVR Dynamic Resolution",
-					"description": "Adjusts HMD resolution with frametimes"
+					"name": "OVR Dynamic Resolution",
+					"description": "OVR Dynamic Resolution"
 				}
 			}
 		}

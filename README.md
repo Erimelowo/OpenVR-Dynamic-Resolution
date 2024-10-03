@@ -13,15 +13,19 @@ This is **not** the same as SteamVR's Auto Resolution, which instead seems to be
 
 **Check out [WorkingGames.md](WorkingGames.md) for a list of working and non-working games.**
 
-## Installation/Using It
+## Installation
 
+**[Get OVRDR on Steam](https://store.steampowered.com/app/3243840/OVR_Dynamic_Resolution/)!**  
+
+Manual installation:
 - Download the [latest release ](https://github.com/Erimelowo/OpenVR-Dynamic-Resolution/releases/latest/download/OVR-Dynamic-Resolution.zip)
 - Extract the .zip
 - Launch `OVR-Dynamic-Resolution.exe`
 
 ## Settings Descriptions
 
-Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as the executable file (`OpenVR-Dynamic-Resolution.exe`).  
+**It is recommended to change settings in the application itself, but below is a description for manually editing them.**  
+Settings are found in the `settings.ini` file. Do not rename that file. It should be located in the same folder as the executable file (`OVR-Dynamic-Resolution.exe`).  
 *Pro tip: if you want a higher resolution (for supersampling), you can lower your HMD's framerate or set `alwaysReproject` to 1 to increase the target frametime.*
 
 - `autoStart`: (0 = disabled, 1 = enabled) Enabling it will launch the program with SteamVR automatically.

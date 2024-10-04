@@ -944,10 +944,10 @@ int main(int argc, char *argv[])
 					addTooltip("Percentages to decrease resolution when needed.");
 
 					ImGui::InputInt("Increase scale", &resIncreaseScale, 10);
-					addTooltip("Resolution increase relative to frametime headroom. The more frametime headroom and the higher this value is, the faster resolution will increase.");
+					addTooltip("The more frametime headroom and the higher this value is, the more resolution will increase each time.");
 
 					ImGui::InputInt("Decrease scale", &resDecreaseScale, 10);
-					addTooltip("Resolution decrease relative to frametime excess. The more frametime excess and the higher this value is, the faster resolution will decrease.");
+					addTooltip("The more frametime excess and the higher this value is, the more resolution will decrease each time.");
 
 					ImGui::InputFloat("Minimum CPU time threshold", &minCpuTimeThreshold, 0.1);
 					addTooltip("Don't increase resolution if the CPU frametime is below this value (useful to prevent resolution increases during loading screens).");

@@ -573,7 +573,7 @@ int main(int argc, char *argv[])
 
 	// Initialize loop variables
 	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
-	long lastChangeTime = 0;
+	long lastChangeTime = getCurrentTimeMillis() - resChangeDelayMs - 1;
 	bool adjustResolution = true;
 	bool openvrQuit = false;
 	bool userPauseRes = false;

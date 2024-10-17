@@ -24,7 +24,7 @@ ELSE()
 ENDIF()
 CPMAddPackage(
   NAME openvr 
-  URL https://github.com/ValveSoftware/openvr/archive/refs/tags/v2.5.1.zip
+  URL https://github.com/ValveSoftware/openvr/archive/refs/tags/v1.26.7.zip
   OPTIONS "BUILD_SHARED ${OPENVR_SHARED}"
 )
 

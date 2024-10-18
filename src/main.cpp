@@ -77,8 +77,8 @@ int minimizeOnStart = 0;
 // General
 int resChangeDelayMs = 2500;
 int dataAverageSamples = 128;
-std::string disabledApps = "steam.app.620980"; // Beat Saber
-std::set<std::string> disabledAppsSet = {"steam.app.620980"};
+std::string disabledApps = "steam.app.620980 steam.app.658920 steam.app.2177750 steam.app.2177760"; // Beat Saber and HL2VR
+std::set<std::string> disabledAppsSet = { "steam.app.620980", "steam.app.658920", "steam.app.2177750", "steam.app.2177760" };
 // Resolution
 int initialRes = 100;
 int minRes = 70;

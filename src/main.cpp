@@ -78,7 +78,7 @@ int minimizeOnStart = 0;
 int resChangeDelayMs = 3000;
 int dataAverageSamples = 128;
 std::string disabledApps = "steam.app.620980 steam.app.658920 steam.app.2177750 steam.app.2177760"; // Beat Saber and HL2VR
-std::set<std::string> disabledAppsSet = { "steam.app.620980", "steam.app.658920", "steam.app.2177750", "steam.app.2177760" };
+std::set<std::string> disabledAppsSet = {"steam.app.620980", "steam.app.658920", "steam.app.2177750", "steam.app.2177760"};
 // Resolution
 int initialRes = 100;
 int minRes = 70;
@@ -87,8 +87,8 @@ int resIncreaseThreshold = 80;
 int resDecreaseThreshold = 88;
 int resIncreaseMin = 3;
 int resDecreaseMin = 6;
-int resIncreaseScale = 120;
-int resDecreaseScale = 130;
+int resIncreaseScale = 140;
+int resDecreaseScale = 140;
 float minCpuTimeThreshold = 0.6f;
 bool resetOnThreshold = true;
 // Reprojection
@@ -306,14 +306,14 @@ bool isApplicationDisabled(std::string appKey)
 	return disabledAppsSet.find(appKey) != disabledAppsSet.end() || appKey == "";
 }
 
-bool shouldAdjustResolution(std::string appKey, bool userPauseRes, float cpuTime)
+bool shouldAdjustResolution(std::string appKey, bool manualRes, float cpuTime)
 {
 	// Check if the SteamVR dashboard is open
 	bool inDashboard = vr::VROverlay()->IsDashboardVisible();
 	// Check that we're in a supported application
 	bool isCurrentAppDisabled = isApplicationDisabled(appKey);
 	// Only adjust resolution if not in dashboard, in a supported application. user didn't pause res and cpu time isn't below threshold
-	return !inDashboard && !isCurrentAppDisabled && !userPauseRes && !(resetOnThreshold && cpuTime < minCpuTimeThreshold);
+	return !inDashboard && !isCurrentAppDisabled && !manualRes && !(resetOnThreshold && cpuTime < minCpuTimeThreshold);
 }
 
 void printLine(GLFWwindow *window, std::string text, long duration)
@@ -576,7 +576,7 @@ int main(int argc, char *argv[])
 	long lastChangeTime = getCurrentTimeMillis() - resChangeDelayMs - 1;
 	bool adjustResolution = true;
 	bool openvrQuit = false;
-	bool userPauseRes = false;
+	bool manualRes = false;
 
 	// Resolution variables to display in GUI
 	float averageGpuTime = 0;
@@ -689,7 +689,7 @@ int main(int argc, char *argv[])
 #pragma region Resolution adjustment
 			// Get the current application key
 			std::string appKey = getCurrentApplicationKey();
-			adjustResolution = shouldAdjustResolution(appKey, userPauseRes, averageCpuTime);
+			adjustResolution = shouldAdjustResolution(appKey, manualRes, averageCpuTime);
 			if (adjustResolution)
 			{
 				// Adjust resolution
@@ -727,8 +727,9 @@ int main(int argc, char *argv[])
 					newRes = std::clamp(newRes, minRes, maxRes);
 				}
 			}
-			else if (appKey == "" || (resetOnThreshold && averageCpuTime < minCpuTimeThreshold))
+			else if ((appKey == "" || (resetOnThreshold && averageCpuTime < minCpuTimeThreshold)) && !manualRes)
 			{
+				// If (in SteamVR void or cpuTime below threshold) and user didn't pause res
 				// Reset to initialRes
 				newRes = initialRes;
 			}
@@ -812,15 +813,32 @@ int main(int argc, char *argv[])
 			ImGui::Text("%s", fmt::format("Reprojection ratio: {:.2f}", averageFrameShown - 1).c_str());
 
 			// Current resolution
-			ImGui::Text("%s", fmt::format("Resolution = {}", newRes).c_str());
+			if (manualRes)
+			{
+				ImGui::Text("Resolution =");
+			}
+			else
+			{
+				ImGui::Text("%s", fmt::format("Resolution = {}", newRes).c_str());
+			}
+
 			// Resolution adjustment status
 			if (!adjustResolution)
 			{
 				ImGui::SameLine(0, 10);
-				if (userPauseRes) {
+				if (manualRes)
+				{
+					ImGui::PushItemWidth(172);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+					if (ImGui::SliderInt("", &newRes, 20, 500, "%d", ImGuiSliderFlags_AlwaysClamp))
+					{
+						vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
+					}
+					ImGui::PopStyleVar();
+				}
+				else
+				{
 					ImGui::Text("(adjustment paused)");
-				} else {
-					ImGui::Text("(adjustment stopped)");
 				}
 			}
 
@@ -834,15 +852,15 @@ int main(int argc, char *argv[])
 			// Resolution pausing
 			ImGui::SameLine();
 			const char *pauseText;
-			if (!userPauseRes)
-				pauseText = "Pause resolution";
+			if (!manualRes)
+				pauseText = "Manual resolution";
 			else
-				pauseText = "Unpause resolution";
+				pauseText = "Dynamic resolution";
 			bool pausePressed = ImGui::Button(pauseText, ImVec2(142, 28));
 			if (pausePressed)
 			{
-				userPauseRes = !userPauseRes;
-				adjustResolution = shouldAdjustResolution(getCurrentApplicationKey(), userPauseRes, averageCpuTime);
+				manualRes = !manualRes;
+				adjustResolution = shouldAdjustResolution(getCurrentApplicationKey(), manualRes, averageCpuTime);
 			}
 
 			// Stop creating the main window

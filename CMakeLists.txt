@@ -80,13 +80,6 @@ CPMAddPackage(
 add_library(lodepng STATIC "${lodepng_SOURCE_DIR}/lodepng.cpp")
 target_include_directories(lodepng PUBLIC  "${lodepng_SOURCE_DIR}")
 
-IF(WIN32)
-CPMAddPackage(
-    NAME tray
-    URL https://github.com/Soundux/traypp/archive/698db7d58dd450cc9e30dc12d3bd0c5ca4d6a5b1.zip
-)
-ENDIF()
-
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH $ORIGIN)
@@ -107,16 +100,12 @@ if(WIN32)
 link_directories("${OPENVR_CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 endif()
 if(WIN32)
-add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp")
+add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/pathtools_excerpt.cpp" "src/setup.cpp" "src/tray_windows.c")
 else()
 add_executable("${PROJECT_NAME}" ${GUI_TYPE} "src/main.cpp" "src/setup.cpp")
 endif()
 
 target_link_libraries("${PROJECT_NAME}" openvr_api fmt::fmt-header-only simpleini imgui lodepng Threads::Threads)
-if(TARGET tray)
-  target_link_libraries("${PROJECT_NAME}" tray)
-endif()
-
 target_include_directories("${PROJECT_NAME}" PRIVATE ${CMAKE_CURRENT_BINARY_DIR} PUBLIC "${openvr_SOURCE_DIR}/headers")
 target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
 

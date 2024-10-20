@@ -104,4 +104,4 @@ We also use:
 - The [fmt](https://github.com/fmtlib/fmt) library which is available under a Boost-like license. 
 - [DearImGui](https://github.com/ocornut/imgui) which is available under the MIT license.
 - [lodepng](https://github.com/lvandeve/lodepng/blob/master/LICENSE) which is available under the zlib license.
-- [Traypp](https://github.com/Soundux/traypp) which is available under the MIT license.
+- A [tray fork](https://github.com/dmikushin/tray) which is available under the MIT license.

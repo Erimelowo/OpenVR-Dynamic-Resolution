@@ -34,10 +34,7 @@
 #include "lodepng.h"
 
 // Tray icon
-#if __has_include(<tray.hpp>)
-#include <tray.hpp>
-#define TRAY_ICON
-#endif
+#include "tray.h"
 
 #ifndef WIN32
 #define HMODULE void *
@@ -69,6 +66,10 @@ static constexpr const int mainWindowHeight = 304;
 
 static constexpr const float bitsToGB = 1073741824;
 
+GLFWwindow *glfwWindow;
+
+bool trayQuit = false;
+
 #pragma region Config
 #pragma region Default settings
 // Initialization
@@ -86,7 +87,7 @@ int maxRes = 250;
 int resIncreaseThreshold = 80;
 int resDecreaseThreshold = 88;
 int resIncreaseMin = 3;
-int resDecreaseMin = 6;
+int resDecreaseMin = 5;
 int resIncreaseScale = 140;
 int resDecreaseScale = 140;
 float minCpuTimeThreshold = 0.6f;
@@ -152,7 +153,7 @@ bool loadSettings()
 		if (dataAverageSamples > 128)
 			dataAverageSamples = 128; // Max stored by OpenVR
 		disabledApps = ini.GetValue("General", "disabledApps", disabledApps.c_str());
-		std::replace(disabledApps.begin(), disabledApps.end(), ' ', '\n'); // todo test
+		std::replace(disabledApps.begin(), disabledApps.end(), ' ', '\n');
 		disabledAppsSet = multilineStringToSet(disabledApps);
 		// Resolution
 		initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
@@ -316,11 +317,11 @@ bool shouldAdjustResolution(std::string appKey, bool manualRes, float cpuTime)
 	return !inDashboard && !isCurrentAppDisabled && !manualRes && !(resetOnThreshold && cpuTime < minCpuTimeThreshold);
 }
 
-void printLine(GLFWwindow *window, std::string text, long duration)
+void printLine(std::string text, long duration)
 {
 	long startTime = getCurrentTimeMillis();
 
-	while (getCurrentTimeMillis() < startTime + duration && !glfwWindowShouldClose(window))
+	while (getCurrentTimeMillis() < startTime + duration && !glfwWindowShouldClose(glfwWindow))
 	{
 		glfwPollEvents();
 
@@ -346,14 +347,14 @@ void printLine(GLFWwindow *window, std::string text, long duration)
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(glfwWindow);
 
 		// Sleep to display the text for a set duration
 		std::this_thread::sleep_for(refreshIntervalBackground);
 	}
 }
 
-void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary)
+void cleanup(nvmlLib nvmlLibrary)
 {
 	// OpenVR cleanup
 	vr::VR_Shutdown();
@@ -379,7 +380,7 @@ void cleanup(GLFWwindow *window, nvmlLib nvmlLibrary)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-	glfwDestroyWindow(window);
+	glfwDestroyWindow(glfwWindow);
 	glfwTerminate();
 }
 
@@ -420,10 +421,10 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_RESIZABLE, false);
 
 	// Create window with graphics context
-	GLFWwindow *window = glfwCreateWindow(mainWindowWidth, mainWindowHeight, fmt::format("OVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
-	if (window == nullptr)
+	glfwWindow = glfwCreateWindow(mainWindowWidth, mainWindowHeight, fmt::format("OVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
+	if (glfwWindow == nullptr)
 		return 1;
-	glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(glfwWindow);
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -438,7 +439,7 @@ int main(int argc, char *argv[])
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
 
 	// Setup Platform/Renderer backends
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
 #ifdef __EMSCRIPTEN__
 	ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
 #endif
@@ -450,7 +451,7 @@ int main(int argc, char *argv[])
 	unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
 	icon.width = (int)iconWidth;
 	icon.height = (int)iconHeight;
-	glfwSetWindowIcon(window, 1, &icon);
+	glfwSetWindowIcon(glfwWindow, 1, &icon);
 #pragma endregion
 
 #pragma region VR init
@@ -460,12 +461,12 @@ int main(int argc, char *argv[])
 	if (init_error)
 	{
 		system = nullptr;
-		printLine(window, VR_GetVRInitErrorAsEnglishDescription(init_error), 6000l);
+		printLine(VR_GetVRInitErrorAsEnglishDescription(init_error), 6000l);
 		return EXIT_FAILURE;
 	}
 	if (!VRCompositor())
 	{
-		printLine(window, "Failed to initialize VR compositor.", 6000l);
+		printLine("Failed to initialize VR compositor.", 6000l);
 		return EXIT_FAILURE;
 	}
 #pragma endregion
@@ -477,13 +478,13 @@ int main(int argc, char *argv[])
 	// Set auto-start
 	int autoStartResult = handle_setup(autoStart);
 	if (autoStartResult != 0)
-		printLine(window, fmt::format("Error toggling auto-start ({}) ", autoStartResult), 6000l);
+		printLine(fmt::format("Error toggling auto-start ({}) ", autoStartResult), 6000l);
 
 	// Minimize or hide the window according to config
 	if (minimizeOnStart == 1) // Minimize
-		glfwIconifyWindow(window);
+		glfwIconifyWindow(glfwWindow);
 	else if (minimizeOnStart == 2) // Hide
-		glfwHideWindow(window);
+		glfwHideWindow(glfwWindow);
 
 	// Make sure we can set resolution ourselves (Custom instead of Auto)
 	vr::VRSettings()->SetInt32(vr::k_pch_SteamVR_Section,
@@ -555,21 +556,32 @@ int main(int argc, char *argv[])
 		nvmlEnabled = false;
 	}
 #pragma endregion
-#if defined(TRAY_ICON)
-	// Add tray icon
-	Tray::Tray tray("OVRDR", "icon.ico");
-	// Construct menu
-	tray.addEntries(Tray::Button("Show", [&]
-								 { glfwShowWindow(window); }),
-					Tray::Button("Hide", [&]
-								 { glfwHideWindow(window); }),
-					Tray::Separator(),
-					Tray::Button("Exit", [&]
-								 { cleanup(window, nvmlLibrary); tray.exit(); return 0; }));
+#if defined(_WIN32)
+	const char *hideToggleText = "Hide";
+	if (minimizeOnStart == 2)
+	{
+		hideToggleText = "Show";
+	}
 
-	// Run in a thread
-	std::thread trayThread(&Tray::Tray::run, &tray);
-#endif // TRAY_ICON
+	tray trayInstance = {
+		"icon.ico",
+		"OVR Dynamic Resolution",
+		[](tray *trayInstance)
+		{ trayInstance->menu->text = "Hide"; tray_update(trayInstance); glfwShowWindow(glfwWindow); },
+		new tray_menu_item[5]{
+			{hideToggleText, 0, 0, [](tray_menu_item *item)
+			 { if (item->text == "Hide") { item->text = "Show"; tray_update(tray_get_instance()); glfwHideWindow(glfwWindow); } 
+			   else { item->text = "Hide"; tray_update(tray_get_instance()); glfwShowWindow(glfwWindow); } }},
+			{"-", 0, 0, nullptr},
+			{"Quit", 0, 0, [](tray_menu_item *item)
+			 { trayQuit = true; }},
+			{nullptr, 0, 0, nullptr}}};
+
+	tray_init(&trayInstance);
+
+	std::thread trayThread([&]
+						   { while(tray_loop(1) == 0); trayQuit = true; });
+#endif // _WIN32
 
 	// Initialize loop variables
 	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
@@ -595,7 +607,7 @@ int main(int argc, char *argv[])
 	bool prevAutoStart = autoStart;
 
 	// event loop
-	while (!glfwWindowShouldClose(window) && !openvrQuit)
+	while (!glfwWindowShouldClose(glfwWindow) && !openvrQuit && !trayQuit)
 	{
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
@@ -828,7 +840,7 @@ int main(int argc, char *argv[])
 				ImGui::SameLine(0, 10);
 				if (manualRes)
 				{
-					ImGui::PushItemWidth(172);
+					ImGui::PushItemWidth(192);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 					if (ImGui::SliderInt("", &newRes, 20, 500, "%d", ImGuiSliderFlags_AlwaysClamp))
 					{
@@ -905,7 +917,7 @@ int main(int argc, char *argv[])
 			if (ImGui::CollapsingHeader("General"))
 			{
 				if (ImGui::InputInt("Resolution change delay ms", &resChangeDelayMs, 100))
-					resChangeDelayMs = std::max(resChangeDelayMs, 10);
+					resChangeDelayMs = std::max(resChangeDelayMs, 100);
 				addTooltip("Delay in milliseconds between resolution changes.");
 
 				if (ImGui::InputInt("Data average samples.", &dataAverageSamples, 2))
@@ -1043,7 +1055,7 @@ int main(int argc, char *argv[])
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(glfwWindow);
 #pragma endregion
 
 		// Check if OpenVR is quitting so we can quit alongside it
@@ -1060,7 +1072,7 @@ int main(int argc, char *argv[])
 
 		// Calculate how long to sleep for depending on if the window is focused or not.
 		std::chrono::milliseconds sleepTime;
-		if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
+		if (glfwGetWindowAttrib(glfwWindow, GLFW_FOCUSED))
 			sleepTime = refreshIntervalFocused;
 		else
 			sleepTime = refreshIntervalBackground;
@@ -1069,11 +1081,11 @@ int main(int argc, char *argv[])
 		std::this_thread::sleep_for(sleepTime);
 	}
 
-	cleanup(window, nvmlLibrary);
+	cleanup(nvmlLibrary);
 
-#if defined(TRAY_ICON)
-	tray.exit();
-#endif // TRAY_ICON
+#if defined(_WIN32)
+	tray_exit();
+#endif // _WIN32
 
 	return 0;
 }

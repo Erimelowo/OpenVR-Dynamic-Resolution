@@ -42,6 +42,8 @@ As a rule of thumb, Unreal Engine and OpenXR games won't work while Unity and Op
 - Rec Room
 - Skyrim VR
 - Sprint Vector [UE4]
+- SteamVR Home [has its own dynamic resolution]
+- The Lab [has its own dynamic resolution]
 - The Walking Dead: Saints & Sinners [UE4]
 - Vail VR [UE5]
 - Zenith MMO

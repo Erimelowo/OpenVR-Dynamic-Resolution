@@ -959,11 +959,11 @@ int main(int argc, char *argv[])
 				if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_NoTreePushOnOpen))
 				{
 					if (ImGui::InputInt("Increase threshold", &resIncreaseThreshold, 1))
-						resIncreaseThreshold = std::clamp(resIncreaseThreshold, 0, 100);
+						resIncreaseThreshold = std::max(resIncreaseThreshold, 0);
 					addTooltip("Percentage of the target frametime at which to stop increasing resolution.");
 
 					if (ImGui::InputInt("Decrease threshold", &resDecreaseThreshold, 1))
-						resDecreaseThreshold = std::clamp(resDecreaseThreshold, 0, 100);
+						resDecreaseThreshold = std::max(resDecreaseThreshold, 0);
 					addTooltip("Percentage of the target frametime at which to start decreasing resolution.");
 
 					ImGui::InputInt("Increase minimum", &resIncreaseMin, 1);

@@ -1,16 +1,18 @@
 List of working and non-working games. Games not on this list have not been tested and may or may not work. Feel free to contribute to it ^^
-As a rule of thumb, Unreal Engine and OpenXR games won't work while Unity and OpenVR games games will work.
+As a rule of thumb, OpenXR games and most Unreal Engine games won't work while Unity and OpenVR games games will work.
 
 ## Working games
 
 - Arizona Sunshine
 - BONEWORKS
 - ChilloutVR
+- Grounded
 - Half-Life 2: VR Mod (with big stutters)
 - H3VR
 - Hellsweeper VR
 - NeosVR
 - OVRLRD
+- Pinbal FX
 - Space Pirate Trainer
 - The Forest
 - Until You Fall

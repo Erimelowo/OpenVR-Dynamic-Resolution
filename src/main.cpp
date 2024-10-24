@@ -1033,6 +1033,9 @@ int main(int argc, char *argv[])
 				if (oldDataAverageSamples != dataAverageSamples)
 					frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
 			}
+			ImGui::PopStyleColor(); // pushRedButtonColour();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			pushGreenButtonColour();
 			bool savePressed = ImGui::Button("Save", ImVec2(82, 28));
@@ -1045,17 +1048,27 @@ int main(int argc, char *argv[])
 					prevAutoStart = autoStart;
 				}
 			}
+			ImGui::PopStyleColor(); // pushGreenButtonColour();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
 
 			// Stop creating the settings window
 			ImGui::End();
 		}
 #pragma endregion
+		ImGui::PopStyleColor(); // pushGrayButtonColour();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+
+		ImGui::PopStyleColor(); // ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
 
 		// Rendering
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(glfwWindow);
+
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
 #pragma endregion
 
 		// Check if OpenVR is quitting so we can quit alongside it

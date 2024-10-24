@@ -368,12 +368,14 @@ void cleanup(nvmlLib nvmlLibrary)
 	}
 	FreeLibrary(nvmlLibrary);
 #else
-	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
-	if (nvmlShutdownPtr)
-	{
-		nvmlShutdownPtr();
+	if (nvmlEnabled) {
+		nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+		if (nvmlShutdownPtr)
+		{
+			nvmlShutdownPtr();
+		}
+		dlclose(nvmlLibrary);
 	}
-	dlclose(nvmlLibrary);
 #endif
 
 	// GUI cleanup

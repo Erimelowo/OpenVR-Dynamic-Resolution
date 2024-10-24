@@ -842,7 +842,7 @@ int main(int argc, char *argv[])
 				{
 					ImGui::PushItemWidth(192);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-					if (ImGui::SliderInt("", &newRes, 20, 500, "%d", ImGuiSliderFlags_AlwaysClamp))
+					if (ImGui::SliderInt("##", &newRes, 20, 500, "%d", ImGuiSliderFlags_AlwaysClamp))
 					{
 						vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
 					}

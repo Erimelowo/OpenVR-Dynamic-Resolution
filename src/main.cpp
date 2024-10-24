@@ -450,10 +450,11 @@ int main(int argc, char *argv[])
 	// Set window icon
 	GLFWimage icon;
 	unsigned iconWidth, iconHeight;
-	unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
-	icon.width = (int)iconWidth;
-	icon.height = (int)iconHeight;
-	glfwSetWindowIcon(glfwWindow, 1, &icon);
+	if (lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath) == 0) {
+		icon.width = (int)iconWidth;
+		icon.height = (int)iconHeight;
+		glfwSetWindowIcon(glfwWindow, 1, &icon);
+	}
 #pragma endregion
 
 #pragma region VR init

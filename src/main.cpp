@@ -78,6 +78,7 @@ int minimizeOnStart = 0;
 // General
 int resChangeDelayMs = 3000;
 int dataAverageSamples = 128;
+bool externalResChangeCompatibility = false;
 std::string blacklistApps = "steam.app.620980 steam.app.658920 steam.app.2177750 steam.app.2177760"; // Beat Saber and HL2VR
 std::set<std::string> blacklistAppsSet = {"steam.app.620980", "steam.app.658920", "steam.app.2177750", "steam.app.2177760"};
 bool whitelistEnabled = false;
@@ -154,6 +155,7 @@ bool loadSettings()
 		// General
 		resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
 		dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+		externalResChangeCompatibility = std::stoi(ini.GetValue("General", "externalResChangeCompatibility", std::to_string(externalResChangeCompatibility).c_str()));
 		if (dataAverageSamples > 128)
 			dataAverageSamples = 128; // Max stored by OpenVR
 		// blacklist
@@ -210,6 +212,7 @@ void saveSettings()
 	// General
 	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
 	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("General", "externalResChangeCompatibility", std::to_string(externalResChangeCompatibility).c_str());
 	ini.SetValue("General", "disabledApps", setToConfigString(blacklistAppsSet).c_str());
 	ini.SetValue("General", "whitelistEnabled", std::to_string(whitelistEnabled).c_str());
 	ini.SetValue("General", "whitelistApps", setToConfigString(whitelistAppsSet).c_str());
@@ -446,7 +449,7 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_RESIZABLE, false);
 
 	// Create window with graphics context
-	glfwWindow = glfwCreateWindow(mainWindowWidth, mainWindowHeight, fmt::format("OVR Dynamic Resolution {}", version).c_str(), nullptr, nullptr);
+	glfwWindow = glfwCreateWindow(mainWindowWidth, mainWindowHeight, "OVR Dynamic Resolution", nullptr, nullptr);
 	if (glfwWindow == nullptr)
 		return 1;
 	glfwMakeContextCurrent(glfwWindow);
@@ -497,9 +500,10 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 	// Load settings from ini file
-	if (!loadSettings()) {
+	if (!loadSettings())
+	{
 		std::replace(blacklistApps.begin(), blacklistApps.end(), ' ', '\n'); // Set blacklist newlines
-		saveSettings(); // Restore settings
+		saveSettings();														 // Restore settings
 	}
 
 	// Set auto-start
@@ -621,7 +625,7 @@ int main(int argc, char *argv[])
 	float averageGpuTime = 0;
 	float averageCpuTime = 0;
 	float averageFrameShown = 0;
-	int newRes = 0;
+	float newRes = initialRes;
 	int targetFps = 0;
 	float targetFrametime = 0;
 	int hmdHz = 0;
@@ -645,8 +649,14 @@ int main(int argc, char *argv[])
 			lastChangeTime = currentTime;
 
 #pragma region Getting data
+			float currentRes = vr::VRSettings()->GetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float) * 100.0f;
+
+			// Check for external resolution change compatibility
+			if (externalResChangeCompatibility && std::fabs(newRes - currentRes) > 0.001f && !manualRes)
+				manualRes = true;
+
 			// Fetch resolution and target fps
-			newRes = vr::VRSettings()->GetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float) * 100;
+			newRes = currentRes;
 			float lastRes = newRes;
 			targetFps = std::round(vr::VRSystem()->GetFloatTrackedDeviceProperty(0, Prop_DisplayFrequency_Float));
 			targetFrametime = 1000.0f / targetFps;
@@ -759,11 +769,11 @@ int main(int argc, char *argv[])
 					else if (vramOnlyMode && newRes < initialRes && vramUsed < vramTarget / 100.0f)
 					{
 						// When in VRAM-only mode, make sure the res goes back up when possible.
-						newRes = std::min(initialRes, newRes + resIncreaseMin);
+						newRes = std::min(initialRes, (int)std::round(newRes) + resIncreaseMin);
 					}
 
 					// Clamp the new resolution
-					newRes = std::clamp(newRes, minRes, maxRes);
+					newRes = std::clamp((int)std::round(newRes), minRes, maxRes);
 				}
 			}
 			else if ((appKey == "" || (resetOnThreshold && averageCpuTime < minCpuTimeThreshold)) && !manualRes)
@@ -803,7 +813,7 @@ int main(int argc, char *argv[])
 			ImGui::SetWindowSize(ImVec2(mainWindowWidth, mainWindowHeight));
 
 			// Title
-			ImGui::Text("OVR Dynamic Resolution");
+			ImGui::Text(fmt::format("OVR Dynamic Resolution {}", version).c_str());
 
 			ImGui::Separator();
 			ImGui::NewLine();
@@ -858,7 +868,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				ImGui::Text("%s", fmt::format("Resolution = {}", newRes).c_str());
+				ImGui::Text("%s", fmt::format("Resolution = {:.0f}", newRes).c_str());
 			}
 
 			// Resolution adjustment status
@@ -869,7 +879,7 @@ int main(int argc, char *argv[])
 				{
 					ImGui::PushItemWidth(192);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-					if (ImGui::SliderInt("", &newRes, 20, 500, "%d", ImGuiSliderFlags_AlwaysClamp))
+					if (ImGui::SliderFloat("", &newRes, 20.0f, 500.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp))
 					{
 						vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
 					}
@@ -954,6 +964,9 @@ int main(int argc, char *argv[])
 				}
 				addTooltip("Number of frames' frametimes to average out.");
 
+				ImGui::Checkbox("External res change compatibility", &externalResChangeCompatibility);
+				addTooltip("Automatically switch to manual resolution adjustment within the app when VR resolution is changed from an external source (SteamVR setting, Oyasumi, etc.) as to let the external source control the resolution. Does not automatically switch back to dynamic resolution adjustment.");
+
 				ImGui::Text("Blacklist");
 				addTooltip("Don't allow resolution changes in blacklisted applications.");
 				if (ImGui::InputTextMultiline("Blacklisted apps", &blacklistApps, ImVec2(130, 60), ImGuiInputTextFlags_CharsNoBlank))
@@ -965,7 +978,8 @@ int main(int argc, char *argv[])
 					if (!isApplicationBlacklisted(appKey))
 					{
 						blacklistAppsSet.insert(appKey);
-						if (blacklistApps != "") blacklistApps += "\n";
+						if (blacklistApps != "")
+							blacklistApps += "\n";
 						blacklistApps += appKey;
 					}
 				}
@@ -982,7 +996,8 @@ int main(int argc, char *argv[])
 					if (!isApplicationWhitelisted(appKey))
 					{
 						whitelistAppsSet.insert(appKey);
-						if (whitelistApps != "") whitelistApps += "\n";
+						if (whitelistApps != "")
+							whitelistApps += "\n";
 						whitelistApps += appKey;
 					}
 				}

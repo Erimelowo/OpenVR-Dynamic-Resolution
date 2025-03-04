@@ -651,9 +651,15 @@ int main(int argc, char *argv[])
 #pragma region Getting data
 			float currentRes = vr::VRSettings()->GetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float) * 100.0f;
 
-			// Check for external resolution change compatibility
+			// Check for external resolution change (if resolution got changed and it wasn't us)
 			if (externalResChangeCompatibility && std::fabs(newRes - currentRes) > 0.001f && !manualRes)
 				manualRes = true;
+
+			// Check for end of external resolution change (if automatic resolution is enabled)
+			if (externalResChangeCompatibility && !vr::VRSettings()->GetInt32(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleManualOverride_Bool)) {
+				vr::VRSettings()->SetInt32(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleManualOverride_Bool, true);
+				manualRes = false;
+			}
 
 			// Fetch resolution and target fps
 			newRes = currentRes;
@@ -965,7 +971,7 @@ int main(int argc, char *argv[])
 				addTooltip("Number of frames' frametimes to average out.");
 
 				ImGui::Checkbox("External res change compatibility", &externalResChangeCompatibility);
-				addTooltip("Automatically switch to manual resolution adjustment within the app when VR resolution is changed from an external source (SteamVR setting, Oyasumi, etc.) as to let the external source control the resolution. Does not automatically switch back to dynamic resolution adjustment.");
+				addTooltip("Automatically switch to manual resolution adjustment within the app when VR resolution is changed from an external source (SteamVR setting, Oyasumi, etc.) as to let the external source control the resolution. Automatically switches back to dynamic resolution adjustment when resolution is set to automatic.");
 
 				ImGui::Text("Blacklist");
 				addTooltip("Don't allow resolution changes in blacklisted applications.");

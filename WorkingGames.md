@@ -4,7 +4,7 @@ As a rule of thumb, OpenXR games and most Unreal Engine games won't work while U
 ## Working games
 
 - Arizona Sunshine
-- BONEWORKS
+- BONEWORKS (also has its own dynamic resolution)
 - ChilloutVR
 - Grounded
 - Half-Life 2: VR Mod (with big stutters)
@@ -25,6 +25,7 @@ As a rule of thumb, OpenXR games and most Unreal Engine games won't work while U
 
 - After The Fall
 - Beat Saber
+- Blade & Sorcery
 - Blaston
 - Bullet Train (through Revive) [UE4]
 - BONELAB

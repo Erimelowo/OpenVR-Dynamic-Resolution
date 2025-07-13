@@ -396,12 +396,14 @@ void cleanup(nvmlLib nvmlLibrary)
 	}
 	FreeLibrary(nvmlLibrary);
 #else
-	nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
-	if (nvmlShutdownPtr)
-	{
-		nvmlShutdownPtr();
+	if (nvmlEnabled) {
+		nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
+		if (nvmlShutdownPtr)
+		{
+			nvmlShutdownPtr();
+		}
+		dlclose(nvmlLibrary);
 	}
-	dlclose(nvmlLibrary);
 #endif
 
 	// GUI cleanup
@@ -476,10 +478,11 @@ int main(int argc, char *argv[])
 	// Set window icon
 	GLFWimage icon;
 	unsigned iconWidth, iconHeight;
-	unsigned test = lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath);
-	icon.width = (int)iconWidth;
-	icon.height = (int)iconHeight;
-	glfwSetWindowIcon(glfwWindow, 1, &icon);
+	if (lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath) == 0) {
+		icon.width = (int)iconWidth;
+		icon.height = (int)iconHeight;
+		glfwSetWindowIcon(glfwWindow, 1, &icon);
+	}
 #pragma endregion
 
 #pragma region VR init
@@ -885,7 +888,7 @@ int main(int argc, char *argv[])
 				{
 					ImGui::PushItemWidth(192);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-					if (ImGui::SliderFloat("", &newRes, 20.0f, 500.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp))
+					if (ImGui::SliderFloat("##", &newRes, 20.0f, 500.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp))
 					{
 						vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
 					}
@@ -1101,6 +1104,7 @@ int main(int argc, char *argv[])
 				if (oldDataAverageSamples != dataAverageSamples)
 					frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
 			}
+			ImGui::PopStyleColor(3); // pushRedButtonColour();
 			ImGui::SameLine();
 			pushGreenButtonColour();
 			bool savePressed = ImGui::Button("Save", ImVec2(82, 28));
@@ -1113,17 +1117,23 @@ int main(int argc, char *argv[])
 					prevAutoStart = autoStart;
 				}
 			}
+			ImGui::PopStyleColor(3); // pushGreenButtonColour();
 
 			// Stop creating the settings window
 			ImGui::End();
 		}
 #pragma endregion
+		ImGui::PopStyleColor(3); // pushGrayButtonColour();
+
+		ImGui::PopStyleColor(); // ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
 
 		// Rendering
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(glfwWindow);
+
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.03, 0.03, 0.03, 1));
 #pragma endregion
 
 		// Check if OpenVR is quitting so we can quit alongside it

@@ -106,6 +106,7 @@ int vramTarget = 80;
 int vramLimit = 90;
 bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
+int gpuIndex = 0;
 #pragma endregion
 
 /// Newline-delimited string to a set
@@ -193,6 +194,7 @@ bool loadSettings()
 		vramOnlyMode = std::stoi(ini.GetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str()));
 		vramTarget = std::stoi(ini.GetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str()));
 		vramLimit = std::stoi(ini.GetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str()));
+		gpuIndex = std::stoi(ini.GetValue("VRAM", "gpuIndex", std::to_string(gpuIndex).c_str()));
 
 		return true;
 	}
@@ -243,6 +245,7 @@ void saveSettings()
 	ini.SetValue("VRAM", "vramOnlyMode", std::to_string(vramOnlyMode).c_str());
 	ini.SetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str());
 	ini.SetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str());
+	ini.SetValue("VRAM", "gpuIndex", std::to_string(gpuIndex).c_str());
 
 	// Save changes to disk
 	ini.SaveFile("settings.ini");
@@ -573,7 +576,7 @@ int main(int argc, char *argv[])
 				if (!nvmlDeviceGetHandleByIndexPtr)
 					nvmlEnabled = false;
 				else
-					result = nvmlDeviceGetHandleByIndexPtr(0, &nvmlDevice);
+					result = nvmlDeviceGetHandleByIndexPtr(gpuIndex, &nvmlDevice);
 
 				if (result != NVML_SUCCESS || !nvmlEnabled)
 				{
@@ -595,6 +598,7 @@ int main(int argc, char *argv[])
 		nvmlEnabled = false;
 	}
 #pragma endregion
+#pragma region Tray
 #if defined(_WIN32)
 	const char *hideToggleText = "Hide";
 	if (minimizeOnStart == 2)
@@ -621,6 +625,7 @@ int main(int argc, char *argv[])
 	std::thread trayThread([&]
 						   { while(tray_loop(1) == 0); trayQuit = true; });
 #endif // _WIN32
+#pragma endregion
 
 	// Initialize loop variables
 	Compositor_FrameTiming *frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
@@ -712,7 +717,7 @@ int main(int argc, char *argv[])
 
 				// Add to totals
 				totalGpuTime += gpuTime;
-				totalCpuTime += cpuTime;
+				totalCpuTime += std::max(cpuTime, .0f);
 				frameShownTotal += frameShown;
 			}
 
@@ -1105,6 +1110,9 @@ int main(int argc, char *argv[])
 				if (ImGui::InputInt("VRAM limit", &vramLimit, 2))
 					vramLimit = std::clamp(vramLimit, 0, 100);
 				addTooltip("Resolution starts descreasing once VRAM usage exceeds this percentage.");
+
+				ImGui::InputInt("GPU Index", &gpuIndex, 1);
+				addTooltip("The index of the GPU to use for VRAM monitoring. Only useful in systems with multiple GPUs. Needs restart to take effect.");
 			}
 
 			ImGui::NewLine();

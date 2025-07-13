@@ -76,6 +76,8 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `disabledApps`: Space-delimited list of OpenVR application keys that should be ignored for resolution adjustment. Steam games use the format steam.app.APPID, e.g. steam.app.438100 for VRChat and steam.app.620980 for Beat Saber.
 
+- `gpuIndex`: The index of the GPU to use for VRAM monitoring. Only useful in systems with multiple GPUs. 
+
 ## Building from source
 
 We assume that you already have Git and CMake installed.

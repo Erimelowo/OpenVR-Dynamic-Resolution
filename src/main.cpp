@@ -640,6 +640,8 @@ int main(int argc, char *argv[])
 	float hmdFrametime = 0;
 	int currentFps = 0;
 	float vramUsedGB = 0;
+	uint32_t hmdWidthRes = 0;
+	uint32_t hmdHeightRes = 0;
 
 	// GUI variables
 	bool showSettings = false;
@@ -810,6 +812,8 @@ int main(int argc, char *argv[])
 				// Sets the new resolution
 				vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
 			}
+
+			vr::VRSystem()->GetRecommendedRenderTargetSize(&hmdWidthRes, &hmdHeightRes);
 		}
 #pragma endregion
 
@@ -890,7 +894,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				ImGui::Text("%s", fmt::format("Resolution = {:.0f}", newRes).c_str());
+				ImGui::Text("%s", fmt::format("Resolution = {:.0f} ({} x {})", newRes, hmdWidthRes, hmdHeightRes).c_str());
 			}
 
 			// Resolution adjustment status
@@ -901,9 +905,10 @@ int main(int argc, char *argv[])
 				{
 					ImGui::PushItemWidth(192);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-					if (ImGui::SliderFloat("##", &newRes, 20.0f, 500.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp))
+					if (ImGui::SliderFloat("##", &newRes, 20.0f, 500.0f, fmt::format("%.0f ({} x {})", hmdWidthRes, hmdHeightRes).c_str(), ImGuiSliderFlags_AlwaysClamp))
 					{
 						vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleScale_Float, newRes / 100.0f);
+						vr::VRSystem()->GetRecommendedRenderTargetSize(&hmdWidthRes, &hmdHeightRes);
 					}
 					ImGui::PopStyleVar();
 				}

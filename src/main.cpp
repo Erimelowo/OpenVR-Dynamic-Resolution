@@ -54,7 +54,7 @@ namespace ImGui
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v1.2.0";
+static constexpr const char *version = "v1.3.0";
 
 static constexpr const char *iconPath = "icon.png";
 
@@ -73,18 +73,19 @@ bool trayQuit = false;
 #pragma region Config
 #pragma region Default settings
 // Initialization
-bool autoStart = 1;
+bool autoStart = true;
 int minimizeOnStart = 0;
 // General
-int resChangeDelayMs = 3000;
-int dataAverageSamples = 128;
-bool externalResChangeCompatibility = false;
-std::string blacklistApps = "steam.app.620980 steam.app.658920 steam.app.2177750 steam.app.2177760"; // Beat Saber and HL2VR
+bool closeToTray = false;
+bool externalResChangeCompatibility = true;
+std::string blacklistApps = "steam.app.620980 steam.app.658920 steam.app.2177750 steam.app.2177760";
 std::set<std::string> blacklistAppsSet = {"steam.app.620980", "steam.app.658920", "steam.app.2177750", "steam.app.2177760"};
 bool whitelistEnabled = false;
 std::string whitelistApps = "";
 std::set<std::string> whitelistAppsSet = {};
 // Resolution
+int resChangeDelayMs = 3000;
+int dataAverageSamples = 128;
 int initialRes = 100;
 int minRes = 70;
 int maxRes = 200;
@@ -153,8 +154,7 @@ bool loadSettings()
 		minimizeOnStart = std::stoi(ini.GetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str()));
 
 		// General
-		resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
-		dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
+		closeToTray = std::stoi(ini.GetValue("General", "closeToTray", std::to_string(closeToTray).c_str()));
 		externalResChangeCompatibility = std::stoi(ini.GetValue("General", "externalResChangeCompatibility", std::to_string(externalResChangeCompatibility).c_str()));
 		if (dataAverageSamples > 128)
 			dataAverageSamples = 128; // Max stored by OpenVR
@@ -169,6 +169,7 @@ bool loadSettings()
 		whitelistAppsSet = multilineStringToSet(whitelistApps);
 
 		// Resolution
+		resChangeDelayMs = std::stoi(ini.GetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str()));
 		initialRes = std::stoi(ini.GetValue("Resolution", "initialRes", std::to_string(initialRes).c_str()));
 		minRes = std::stoi(ini.GetValue("Resolution", "minRes", std::to_string(minRes).c_str()));
 		maxRes = std::stoi(ini.GetValue("Resolution", "maxRes", std::to_string(maxRes).c_str()));
@@ -180,6 +181,7 @@ bool loadSettings()
 		resDecreaseScale = std::stoi(ini.GetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str()));
 		minCpuTimeThreshold = std::stof(ini.GetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str()));
 		resetOnThreshold = std::stoi(ini.GetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str()));
+		dataAverageSamples = std::stoi(ini.GetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str()));
 
 		// Reprojection
 		alwaysReproject = std::stoi(ini.GetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str()));
@@ -210,14 +212,14 @@ void saveSettings()
 	ini.SetValue("Startup", "minimizeOnStart", std::to_string(minimizeOnStart).c_str());
 
 	// General
-	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
-	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
+	ini.SetValue("General", "closeToTray", std::to_string(closeToTray).c_str());
 	ini.SetValue("General", "externalResChangeCompatibility", std::to_string(externalResChangeCompatibility).c_str());
 	ini.SetValue("General", "disabledApps", setToConfigString(blacklistAppsSet).c_str());
 	ini.SetValue("General", "whitelistEnabled", std::to_string(whitelistEnabled).c_str());
 	ini.SetValue("General", "whitelistApps", setToConfigString(whitelistAppsSet).c_str());
 
 	// Resolution
+	ini.SetValue("General", "resChangeDelayMs", std::to_string(resChangeDelayMs).c_str());
 	ini.SetValue("Resolution", "initialRes", std::to_string(initialRes).c_str());
 	ini.SetValue("Resolution", "minRes", std::to_string(minRes).c_str());
 	ini.SetValue("Resolution", "maxRes", std::to_string(maxRes).c_str());
@@ -229,6 +231,7 @@ void saveSettings()
 	ini.SetValue("Resolution", "resDecreaseScale", std::to_string(resDecreaseScale).c_str());
 	ini.SetValue("Resolution", "minCpuTimeThreshold", std::to_string(minCpuTimeThreshold).c_str());
 	ini.SetValue("Resolution", "resetOnThreshold", std::to_string(resetOnThreshold).c_str());
+	ini.SetValue("General", "dataAverageSamples", std::to_string(dataAverageSamples).c_str());
 
 	// Reprojection
 	ini.SetValue("Reprojection", "alwaysReproject", std::to_string(alwaysReproject).c_str());
@@ -396,7 +399,8 @@ void cleanup(nvmlLib nvmlLibrary)
 	}
 	FreeLibrary(nvmlLibrary);
 #else
-	if (nvmlEnabled) {
+	if (nvmlEnabled)
+	{
 		nvmlShutdown_t nvmlShutdownPtr = (nvmlShutdown_t)dlsym(nvmlLibrary, "nvmlShutdown");
 		if (nvmlShutdownPtr)
 		{
@@ -478,7 +482,8 @@ int main(int argc, char *argv[])
 	// Set window icon
 	GLFWimage icon;
 	unsigned iconWidth, iconHeight;
-	if (lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath) == 0) {
+	if (lodepng_decode32_file(&(icon.pixels), &(iconWidth), &(iconHeight), iconPath) == 0)
+	{
 		icon.width = (int)iconWidth;
 		icon.height = (int)iconHeight;
 		glfwSetWindowIcon(glfwWindow, 1, &icon);
@@ -641,8 +646,15 @@ int main(int argc, char *argv[])
 	bool prevAutoStart = autoStart;
 
 	// event loop
-	while (!glfwWindowShouldClose(glfwWindow) && !openvrQuit && !trayQuit)
+	while ((!glfwWindowShouldClose(glfwWindow) || closeToTray) && !openvrQuit && !trayQuit)
 	{
+		// Close to tray
+		if (glfwWindowShouldClose(glfwWindow) && closeToTray)
+		{
+			glfwSetWindowShouldClose(glfwWindow, false);
+			glfwHideWindow(glfwWindow);
+		}
+
 		// Get current time
 		long currentTime = getCurrentTimeMillis();
 
@@ -659,7 +671,8 @@ int main(int argc, char *argv[])
 				manualRes = true;
 
 			// Check for end of external resolution change (if automatic resolution is enabled)
-			if (externalResChangeCompatibility && !vr::VRSettings()->GetInt32(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleManualOverride_Bool)) {
+			if (externalResChangeCompatibility && !vr::VRSettings()->GetInt32(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleManualOverride_Bool))
+			{
 				vr::VRSettings()->SetInt32(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_SupersampleManualOverride_Bool, true);
 				manualRes = false;
 			}
@@ -951,7 +964,7 @@ int main(int argc, char *argv[])
 				ImGui::Checkbox("Start with SteamVR", &autoStart);
 				addTooltip("Automatically launch OVRDR alongside SteamVR.");
 
-				ImGui::Text("Startup behaviour:");
+				ImGui::Text("Window startup behaviour:");
 				ImGui::RadioButton("Visible", &minimizeOnStart, 0);
 				addTooltip("Keep the OVRDR window visible on startup.");
 				ImGui::RadioButton("Minimized (taskbar)", &minimizeOnStart, 1);
@@ -962,16 +975,8 @@ int main(int argc, char *argv[])
 
 			if (ImGui::CollapsingHeader("General"))
 			{
-				if (ImGui::InputInt("Resolution change delay ms", &resChangeDelayMs, 100))
-					resChangeDelayMs = std::max(resChangeDelayMs, 100);
-				addTooltip("Delay in milliseconds between resolution changes.");
-
-				if (ImGui::InputInt("Data average samples.", &dataAverageSamples, 2))
-				{
-					dataAverageSamples = std::clamp(dataAverageSamples, 1, 128); // Max stored by OpenVR
-					frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
-				}
-				addTooltip("Number of frames' frametimes to average out.");
+				ImGui::Checkbox("Close to tray", &closeToTray);
+				addTooltip("Minimize the window to the tray when closing it instead of closing the application.");
 
 				ImGui::Checkbox("External res change compatibility", &externalResChangeCompatibility);
 				addTooltip("Automatically switch to manual resolution adjustment within the app when VR resolution is changed from an external source (SteamVR setting, Oyasumi, etc.) as to let the external source control the resolution. Automatically switches back to dynamic resolution adjustment when resolution is set to automatic.");
@@ -1015,6 +1020,10 @@ int main(int argc, char *argv[])
 
 			if (ImGui::CollapsingHeader("Resolution"))
 			{
+				if (ImGui::InputInt("Resolution change delay ms", &resChangeDelayMs, 100))
+					resChangeDelayMs = std::max(resChangeDelayMs, 100);
+				addTooltip("Delay in milliseconds between resolution changes.");
+
 				if (ImGui::InputInt("Initial resolution", &initialRes, 5))
 					initialRes = std::clamp(initialRes, 20, 500);
 				addTooltip("The resolution set at startup. Also used when resetting resolution.");
@@ -1054,6 +1063,13 @@ int main(int argc, char *argv[])
 
 					ImGui::Checkbox("Reset on CPU time threshold", &resetOnThreshold);
 					addTooltip("Reset the resolution to the initial resolution whenever the \"Minimum CPU time threshold\" is met.");
+
+					if (ImGui::InputInt("Data average samples.", &dataAverageSamples, 2))
+					{
+						dataAverageSamples = std::clamp(dataAverageSamples, 1, 128); // Max stored by OpenVR
+						frameTiming = new vr::Compositor_FrameTiming[dataAverageSamples];
+					}
+					addTooltip("Number of frames' frametimes to average out.");
 				}
 			}
 

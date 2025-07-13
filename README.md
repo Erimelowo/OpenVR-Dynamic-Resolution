@@ -32,6 +32,8 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `minimizeOnStart`: (0 = show, 1 = minimize, 2 = hide) Will automatically minimize or hide the window on launch.
 
+- `closeToTray`: Hides the window instead of closing it if value is 1. Doesn't do anything if value is 0.
+
 - `initialRes`: The resolution the program sets your HMD's resolution when starting. Also the resolution that is targeted in vramOnlyMode.
 
 - `minRes`: The minimum value the program will be allowed to set your HMD's resolution to.

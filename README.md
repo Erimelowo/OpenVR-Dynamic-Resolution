@@ -54,8 +54,6 @@ Settings are found in the `settings.ini` file. Do not rename that file. It shoul
 
 - `resDecreaseThreshold`: Percentage of the target frametime at which the program will stop decreasing resolution
 
-- `dataAverageSamples`: Number of samples to use for the average GPU time. One frame gives one sample.
-
 - `minCpuTimeThreshold`: Don't increase resolution when CPU time in milliseconds is below this value. Useful to avoid the resolution increasing in the SteamVR void or during loading screens. Also see resetOnThreshold.
 
 - `resetOnThreshold`: (0 = disabled, 1 = enabled) Enabling will reset the resolution to initialRes whenever minCpuTimeThreshold is met. Useful if you wanna go from playing a supported game to an unsuported games without having to reset your resolution/the program/SteamVR.

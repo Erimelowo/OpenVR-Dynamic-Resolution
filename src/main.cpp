@@ -936,7 +936,7 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					ImGui::Text("(adjustment paused)");
+					ImGui::Text("(paused)");
 				}
 			}
 

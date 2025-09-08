@@ -54,7 +54,7 @@ namespace ImGui
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v1.3.0";
+static constexpr const char *version = "v1.3.1";
 
 static constexpr const char *iconPath = "icon.png";
 
@@ -76,7 +76,7 @@ bool trayQuit = false;
 #pragma region Default settings
 // Initialization
 bool autoStart = true;
-int minimizeOnStart = 0;
+int minimizeOnStart = 1;
 // General
 bool closeToTray = false;
 bool externalResChangeCompatibility = true;
@@ -89,7 +89,7 @@ std::set<std::string> whitelistAppsSet = {};
 int resChangeDelayMs = 6000;
 int initialRes = 100;
 int minRes = 70;
-int maxRes = 200;
+int maxRes = 190;
 float resIncreaseThreshold = 79;
 float resDecreaseThreshold = 89;
 int resIncreaseMin = 2;

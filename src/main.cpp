@@ -86,7 +86,7 @@ bool whitelistEnabled = false;
 std::string whitelistApps = "";
 std::set<std::string> whitelistAppsSet = {};
 // Resolution
-int resChangeDelayMs = 4000;
+int resChangeDelayMs = 6000;
 int initialRes = 100;
 int minRes = 70;
 int maxRes = 200;

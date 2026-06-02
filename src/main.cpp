@@ -54,7 +54,7 @@ namespace ImGui
 using namespace std::chrono_literals;
 using namespace vr;
 
-static constexpr const char *version = "v1.3.1";
+static constexpr const char *version = "v1.4.0";
 
 static constexpr const char *iconPath = "icon.png";
 
@@ -67,6 +67,8 @@ static constexpr const int mainWindowHeight = 304;
 static constexpr const float bitsToGB = 1073741824;
 
 static constexpr const int openvrMaxFrames = 128;
+
+static constexpr const int maxReprojectionCount = 3;
 
 GLFWwindow *glfwWindow;
 
@@ -95,11 +97,11 @@ float resDecreaseThreshold = 89;
 int resIncreaseMin = 2;
 int resDecreaseMin = 3;
 int resIncreaseScale = 200;
-int resDecreaseScale = 200;
+int resDecreaseScale = 180;
 float minCpuTimeThreshold = 0.6f;
 bool resetOnThreshold = true;
 // Reprojection
-bool alwaysReproject = false;
+int alwaysReproject = 0;
 bool preferReprojection = false;
 bool ignoreCpuTime = false;
 // VRAM
@@ -748,18 +750,23 @@ int main(int argc, char *argv[])
 			// Estimated current FPS
 			currentFps = hmdHz / averageFrameShown;
 
-			// Double the target frametime if the user wants to,
-			// or if CPU Frametime is double the target frametime,
-			// or if preferReprojection is true and CPU Frametime is greated than targetFrametime.
-			if ((((averageCpuTime > hmdFrametime && preferReprojection) ||
-				  averageCpuTime / 2 > hmdFrametime) &&
-				 !ignoreCpuTime) ||
-				alwaysReproject)
+			// Reprojection logic
+			int reprojectEager = averageCpuTime > hmdFrametime;
+			int reprojectNormal = averageCpuTime / 2 > hmdFrametime;
+			int reprojectionCount = 0;
+			if (!ignoreCpuTime)
 			{
-				targetFpsHigh /= 2;
-				targetFpsLow /= 2;
-				targetFrametimeHigh *= 2;
-				targetFrametimeLow *= 2;
+				reprojectionCount = averageCpuTime / hmdFrametime; // floored
+				if (!preferReprojection) reprojectionCount--;
+			}
+			// Scale with alwaysReproject and the const max
+			reprojectionCount = std::min(std::max(std::max(reprojectionCount, 0), alwaysReproject), maxReprojectionCount);
+			if (reprojectionCount > 0)
+			{
+				targetFpsHigh /= reprojectionCount + 1;
+				targetFpsLow /= reprojectionCount + 1;
+				targetFrametimeHigh *= reprojectionCount + 1;
+				targetFrametimeLow *= reprojectionCount + 1;
 			}
 
 			// Get VRAM usage
@@ -1095,14 +1102,15 @@ int main(int argc, char *argv[])
 
 			if (ImGui::CollapsingHeader("Reprojection"))
 			{
-				ImGui::Checkbox("Always reproject", &alwaysReproject);
-				addTooltip("Always double the target frametime.");
+				if (ImGui::InputInt("Minimum reprojection", &alwaysReproject, 1))
+					alwaysReproject = std::clamp(alwaysReproject, 0, maxReprojectionCount);
+				addTooltip("Always scale the target frametime at least according to this factor.");
 
 				ImGui::Checkbox("Prefer reprojection", &preferReprojection);
-				addTooltip("If enabled, double the target frametime as soon as the CPU frametime is over the initial target frametime. Else, only double the target frametime if the CPU frametime is over double the initial target frametime.");
+				addTooltip("If enabled, scale the target frametime as soon as the CPU frametime is over the initial target frametime. Else, only scale the target frametime if the CPU frametime is over double, triple, etc. the initial target frametime.");
 
-				ImGui::Checkbox("Ignore CPU time", &ignoreCpuTime);
-				addTooltip("Never change the target frametime depending on the CPU frametime (stops both behaviours described in \"Prefer reprojection\" tooltip).");
+				ImGui::Checkbox("Never reproject", &ignoreCpuTime);
+				addTooltip("Never scale the target frametime depending on the CPU frametime (stops both behaviours described in \"Prefer reprojection\" tooltip; \"Minimum reprojection\" will still work).");
 			}
 
 			if (ImGui::CollapsingHeader("VRAM"))

@@ -110,6 +110,11 @@ int vramLimit = 90;
 bool vramMonitorEnabled = true;
 bool vramOnlyMode = false;
 int gpuIndex = 0;
+// Debug
+bool debugEnabled = false;
+float debugGpuFrametime = 10.0f;
+float debugCpuFrametime = 10.0f;
+float debugVramUsage = 0.5f;
 #pragma endregion
 
 /// Newline-delimited string to a set
@@ -196,6 +201,12 @@ bool loadSettings()
 		vramLimit = std::stoi(ini.GetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str()));
 		gpuIndex = std::stoi(ini.GetValue("VRAM", "gpuIndex", std::to_string(gpuIndex).c_str()));
 
+		// Debug
+		debugEnabled = std::stoi(ini.GetValue("Debug", "debugEnabled", std::to_string(debugEnabled).c_str()));
+		debugGpuFrametime = std::stof(ini.GetValue("Debug", "debugGpuFrametime", std::to_string(debugGpuFrametime).c_str()));
+		debugCpuFrametime = std::stof(ini.GetValue("Debug", "debugCpuFrametime", std::to_string(debugCpuFrametime).c_str()));
+		debugVramUsage = std::stof(ini.GetValue("Debug", "debugVramUsage", std::to_string(debugVramUsage).c_str()));
+
 		return true;
 	}
 	catch (...)
@@ -245,6 +256,12 @@ void saveSettings()
 	ini.SetValue("VRAM", "vramTarget", std::to_string(vramTarget).c_str());
 	ini.SetValue("VRAM", "vramLimit", std::to_string(vramLimit).c_str());
 	ini.SetValue("VRAM", "gpuIndex", std::to_string(gpuIndex).c_str());
+
+	// Debug
+	ini.SetValue("Debug", "debugEnabled", std::to_string(debugEnabled).c_str());
+	ini.SetValue("Debug", "debugGpuFrametime", std::to_string(debugGpuFrametime).c_str());
+	ini.SetValue("Debug", "debugCpuFrametime", std::to_string(debugCpuFrametime).c_str());
+	ini.SetValue("Debug", "debugVramUsage", std::to_string(debugVramUsage).c_str());
 
 	// Save changes to disk
 	ini.SaveFile("settings.ini");
@@ -666,7 +683,7 @@ int main(int argc, char *argv[])
 			glfwSetWindowShouldClose(glfwWindow, false);
 			glfwHideWindow(glfwWindow);
 #if defined(_WIN32)
-			tray_get_instance()->menu->text = "Show"; 
+			tray_get_instance()->menu->text = "Show";
 			tray_update(tray_get_instance());
 #endif
 		}
@@ -743,6 +760,13 @@ int main(int argc, char *argv[])
 			averageCpuTime = totalCpuTime / openvrMaxFrames;
 			averageFrameShown = (float)frameShownTotal / (float)openvrMaxFrames;
 
+			// Debug override CPU and GPU
+			if (debugEnabled)
+			{
+				averageGpuTime = debugGpuFrametime;
+				averageCpuTime = debugCpuFrametime;
+			}
+
 			// GUI
 			gpuFps = std::round(1000.0f / averageGpuTime);
 			cpuFps = std::round(1000.0f / averageCpuTime);
@@ -757,7 +781,8 @@ int main(int argc, char *argv[])
 			if (!ignoreCpuTime)
 			{
 				reprojectionCount = averageCpuTime / hmdFrametime; // floored
-				if (!preferReprojection) reprojectionCount--;
+				if (!preferReprojection)
+					reprojectionCount--;
 			}
 			// Scale with alwaysReproject and the const max
 			reprojectionCount = std::min(std::max(std::max(reprojectionCount, 0), alwaysReproject), maxReprojectionCount);
@@ -782,13 +807,22 @@ int main(int argc, char *argv[])
 #endif
 				nvmlMemory_t nvmlMemory;
 				if (nvmlDeviceGetMemoryInfoPtr(nvmlDevice, &nvmlMemory) != NVML_SUCCESS)
+				{
 					nvmlEnabled = false;
+				}
 				else
+				{
 					vramTotalGB = nvmlMemory.total / bitsToGB;
-
-				vramUsedGB = nvmlMemory.used / bitsToGB;
-				if (nvmlEnabled) // Get the VRAM used in %
+					vramUsedGB = nvmlMemory.used / bitsToGB;
 					vramUsed = (float)nvmlMemory.used / (float)nvmlMemory.total;
+				}
+			}
+
+			// Debug override for VRAM
+			if (debugEnabled)
+			{
+				vramUsedGB = vramTotalGB * debugVramUsage;
+				vramUsed = debugVramUsage;
 			}
 #pragma endregion
 
@@ -871,7 +905,16 @@ int main(int argc, char *argv[])
 			ImGui::Text(fmt::format("OVR Dynamic Resolution {}", version).c_str());
 
 			ImGui::Separator();
-			ImGui::NewLine();
+
+			if (debugEnabled)
+			{
+				ImGui::TextWrapped("Debug enabled");
+				ImGui::Separator();
+			}
+			else
+			{
+				ImGui::NewLine();
+			}
 
 			// HMD Hz
 			ImGui::Text("%s", fmt::format("HMD refresh rate: {} hz ({:.2f} ms)", hmdHz, hmdFrametime).c_str());
@@ -1131,6 +1174,21 @@ int main(int argc, char *argv[])
 
 				ImGui::InputInt("GPU Index", &gpuIndex, 1);
 				addTooltip("The index of the GPU to use for VRAM monitoring. Only useful in systems with multiple GPUs. Needs restart to take effect.");
+			}
+
+			if (ImGui::CollapsingHeader("Debug"))
+			{
+				ImGui::Checkbox("Debug Enabled", &debugEnabled);
+				addTooltip("Enable debug features.");
+
+				ImGui::InputFloat("GPU Frametime", &debugGpuFrametime, 0.5f);
+				addTooltip("Overrides the actual GPU frametime by this value when debug is enabled.");
+
+				ImGui::InputFloat("CPU Frametime", &debugCpuFrametime, 0.5f);
+				addTooltip("Overrides the actual CPU frametime by this value when debug is enabled.");
+
+				ImGui::InputFloat("VRAM Usage", &debugVramUsage, 0.01f);
+				addTooltip("Overrides the actual VRAM usage by this value (0.5 = 50% VRAM usage) when debug is enabled.");
 			}
 
 			ImGui::NewLine();

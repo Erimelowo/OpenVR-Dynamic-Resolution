@@ -1179,7 +1179,7 @@ int main(int argc, char *argv[])
 			if (ImGui::CollapsingHeader("Debug"))
 			{
 				ImGui::Checkbox("Debug Enabled", &debugEnabled);
-				addTooltip("Enable debug features.");
+				addTooltip("Enable debug features. Can be used to test configs and for development. This should not be enabled during normal use.");
 
 				ImGui::InputFloat("GPU Frametime", &debugGpuFrametime, 0.5f);
 				addTooltip("Overrides the actual GPU frametime by this value when debug is enabled.");
